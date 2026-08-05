@@ -1,0 +1,50 @@
+# Default settings for Gesture Mouse.
+# Copy this file, change only the keys you need, and pass it with --config.
+# Numbers are starting values. Tune them for your camera and hand.
+
+[camera]
+index = 0                       # webcam number; the built-in camera is usually 0
+backend = "auto"                # "auto", "dshow", or "msmf" (Windows only)
+width = 640                     # requested frame width in pixels
+height = 480                    # requested frame height in pixels
+fps = 30                        # requested frames per second
+open_timeout_ms = 3000          # wait this long for the first frame
+max_consecutive_failures = 30   # failed reads in a row before the camera counts as lost
+
+[tracker]
+model_path = "models/hand_landmarker.task"
+min_hand_detection_confidence = 0.5
+min_hand_presence_confidence = 0.5
+min_tracking_confidence = 0.5
+
+[gesture]
+pinch_on = 0.30                 # fingertip gap / hand size below this starts a pinch
+pinch_off = 0.45                # gap / hand size above this ends a pinch
+finger_extended_margin = 1.10   # tip must be this much farther from the wrist than the middle joint
+enter_frames = 3                # frames a gesture must last before it counts
+exit_frames = 2                 # frames a gesture must be gone before it ends
+drag_hold_ms = 350              # a pinch held this long becomes a drag
+click_cooldown_ms = 250         # shortest time between two clicks
+lost_hand_grace_frames = 5      # frames without a hand before a drag is released
+scroll_gain = 40.0              # scroll units per full frame height of hand movement
+scroll_dead_zone = 0.01         # ignore smaller hand movements while scrolling
+scroll_max_step = 5             # most scroll units sent in one frame
+
+[cursor]
+margin = 0.15                   # part of each frame edge left out of the active area
+smoothing_alpha = 0.35          # 0 to 1; smaller is smoother but slower
+dead_zone_px = 3                # ignore cursor moves smaller than this
+screen_edge_margin_px = 2       # keep the cursor this far from the screen corners
+
+[ui]
+window_title = "Gesture Mouse"
+show_debug_values = false       # show pinch ratios on the preview
+
+[control]
+start_paused = false
+pause_key = "p"
+quit_keys = ["q", "Esc"]
+
+[logging]
+level = "INFO"                  # DEBUG, INFO, WARNING, ERROR, or CRITICAL
+# file = "output/logs/gesture_mouse.log"

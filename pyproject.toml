@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gesture-mouse"
+version = "0.1.0"
+description = "Real-time webcam hand-gesture mouse control. Local processing only."
+license = "MIT"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "mediapipe>=1.1.0",
+  "opencv-contrib-python>=5.0.0.93",
+  "numpy>=2.5.3",
+  "pyautogui>=0.9.54",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.17.0", "mypy>=2.4.0"]
+
+[project.scripts]
+gesture-mouse = "gesture_mouse.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -m 'not hardware'"
+markers = ["hardware: needs a real webcam or real mouse; never run in CI"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src"]
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["cv2.*", "mediapipe.*", "pyautogui.*"]
+ignore_missing_imports = true
