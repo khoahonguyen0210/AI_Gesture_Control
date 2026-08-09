@@ -14,10 +14,21 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | 2026-10-09 | 1 | `ruff check .`, `ruff format --check .`, `mypy src` | Pass, after one `ruff format` fix |
 | 2026-10-09 | 1 | `python -m gesture_mouse --version` | Printed `gesture-mouse 0.1.0` |
 | 2026-10-09 | 1 | `python -m gesture_mouse --config does_not_exist.toml` | Readable error, exit code 2 |
+| 2026-10-09 | 2 | `python -m pytest -q` | 91 passed (U-CFG, U-GEO-01..06, U-GR-01..15, U-MC-01..05, extra cases) |
+| 2026-10-09 | 2 | `python -m pytest --cov=gesture_mouse --cov-report=term-missing` | geometry 100%, gesture_recognizer 99%, mouse_controller 94% |
+| 2026-10-09 | 2 | Import purity check (test `test_recognizer_imports_no_hardware_library`) | Pass. Prints `[]` |
+| 2026-10-09 | 2 | `ruff check .`, `ruff format --check .`, `mypy src` | Pass |
+| 2026-10-09 | R | Shallow clones of the three references; `rev-parse HEAD` | Pass. Hashes match the dossier |
+| 2026-10-09 | R | `git ls-files \| grep -i test` in each reference | kinivi and Virtual-Mouse: none. mediapipe-samples: Android tests only, none for the Python example |
+| 2026-10-09 | R | kinivi: `pip install --dry-run "mediapipe==0.8.1" ...` (Python 3.12) | Fail: "No matching distribution found for mediapipe==0.8.1" |
+| 2026-10-09 | R | Virtual-Mouse: `pip install -r requirements.txt`, `pip check`, legacy `Hands()` start | Pass. numpy 2.4.4, mediapipe 0.10.14; `cv2` reports 5.0.0 because of the duplicate OpenCV install |
+| 2026-10-09 | R | `git check-ignore research/reference_repos research/envs` | Both ignored |
 
 ## Planned
 
-Manual webcam and mouse rows from the test matrix are added here as their phases arrive.
+| ID | Procedure | Status |
+|---|---|---|
+| R-VM | Run Virtual-Mouse with the safety steps in Execution Handbook Section 8.1 and record webcam behavior | Planned (owner to run). Its failsafe is off, so it was not run by the agent. |
 
 ## Blockers
 

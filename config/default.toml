@@ -21,6 +21,7 @@ min_tracking_confidence = 0.5
 pinch_on = 0.30                 # fingertip gap / hand size below this starts a pinch
 pinch_off = 0.45                # gap / hand size above this ends a pinch
 finger_extended_margin = 1.10   # tip must be this much farther from the wrist than the middle joint
+pinch_min_reach = 0.80          # a finger curled tighter than this cannot pinch (same ratio as above)
 enter_frames = 3                # frames a gesture must last before it counts
 exit_frames = 2                 # frames a gesture must be gone before it ends
 drag_hold_ms = 350              # a pinch held this long becomes a drag

@@ -42,6 +42,7 @@ class GestureConfig:
     pinch_on: float = 0.30
     pinch_off: float = 0.45
     finger_extended_margin: float = 1.10
+    pinch_min_reach: float = 0.80
     enter_frames: int = 3
     exit_frames: int = 2
     drag_hold_ms: int = 350
@@ -142,6 +143,8 @@ def validate(cfg: AppConfig) -> None:
         p.append("gesture.pinch_off must be greater than gesture.pinch_on")
     if g.finger_extended_margin <= 0:
         p.append("gesture.finger_extended_margin must be greater than 0")
+    if g.pinch_min_reach <= 0:
+        p.append("gesture.pinch_min_reach must be greater than 0")
     for name in (
         "enter_frames",
         "exit_frames",
