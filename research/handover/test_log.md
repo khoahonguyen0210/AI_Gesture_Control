@@ -23,6 +23,11 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | 2026-10-09 | R | kinivi: `pip install --dry-run "mediapipe==0.8.1" ...` (Python 3.12) | Fail: "No matching distribution found for mediapipe==0.8.1" |
 | 2026-10-09 | R | Virtual-Mouse: `pip install -r requirements.txt`, `pip check`, legacy `Hands()` start | Pass. numpy 2.4.4, mediapipe 0.10.14; `cv2` reports 5.0.0 because of the duplicate OpenCV install |
 | 2026-10-09 | R | `git check-ignore research/reference_repos research/envs` | Both ignored |
+| 2026-10-09 | 3 | `python -m pytest -q` | 102 passed, 1 deselected (hardware). U-CAM-01..08 pass |
+| 2026-10-09 | 3 | `python -m pytest -q -m hardware` (real camera opens, reads, releases twice) | 1 passed |
+| 2026-10-09 | 3 | M-01: `python scripts/list_cameras.py --backend auto|dshow|msmf` | Pass. Camera 0 works at 640x480 with every backend; indices 1-4 report "Could not open camera" |
+| 2026-10-09 | 3 | M-02: six open-read-release cycles in a row in one process | Pass. Each reopen succeeded right after the previous release |
+| 2026-10-09 | 3 | Camera open time, camera 0 (three runs each, ms) | auto (OpenCV default, MSMF): 14817, 7510, 8244. dshow: 2380, 1864, 2339. msmf: 7822, 6951, 7205. Driver reports 640x480 at 30 fps |
 
 ## Planned
 
@@ -38,4 +43,4 @@ None.
 
 | ID | Date | Assumption | How to confirm |
 |---|---|---|---|
-| A-1 | 2026-10-09 | The built-in camera is index 0 | `python scripts/list_cameras.py` (Phase 3) |
+| A-1 | 2026-10-09 | The built-in camera is index 0 | Confirmed by `python scripts/list_cameras.py` (Phase 3) |
