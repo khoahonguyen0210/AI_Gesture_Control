@@ -25,14 +25,21 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | 2026-10-09 | R | `git check-ignore research/reference_repos research/envs` | Both ignored |
 | 2026-10-09 | 3 | `python -m pytest -q` | 102 passed, 1 deselected (hardware). U-CAM-01..08 pass |
 | 2026-10-09 | 3 | `python -m pytest -q -m hardware` (real camera opens, reads, releases twice) | 1 passed |
-| 2026-10-09 | 3 | M-01: `python scripts/list_cameras.py --backend auto|dshow|msmf` | Pass. Camera 0 works at 640x480 with every backend; indices 1-4 report "Could not open camera" |
+| 2026-10-09 | 3 | M-01: `python scripts/list_cameras.py --backend` with auto, dshow, msmf | Pass. Camera 0 works at 640x480 with every backend; indices 1-4 report "Could not open camera" |
 | 2026-10-09 | 3 | M-02: six open-read-release cycles in a row in one process | Pass. Each reopen succeeded right after the previous release |
 | 2026-10-09 | 3 | Camera open time, camera 0 (three runs each, ms) | auto (OpenCV default, MSMF): 14817, 7510, 8244. dshow: 2380, 1864, 2339. msmf: 7822, 6951, 7205. Driver reports 640x480 at 30 fps |
+| 2026-10-09 | 4 | Installed API check: `help(vision.HandLandmarkerOptions)`, `dir(result)` | Names match the handbook: `running_mode`, `num_hands`, three confidence options; result fields `hand_landmarks`, `hand_world_landmarks`, `handedness`. `close()` twice is safe |
+| 2026-10-09 | 4 | `python -m pytest -q` | 108 passed, 2 deselected. U-HT-01..05 pass |
+| 2026-10-09 | 4 | `python -m pytest -q -m hardware` | 2 passed (real camera; real model on a blank frame) |
+| 2026-10-09 | 4 | 90 real camera frames through the real tracker, no window, nothing saved | Ran without errors. 0 frames with a hand (no hand was shown) |
+| 2026-10-09 | 4 | `python scripts/record_landmarks.py --config does_not_exist.toml` | Readable error, exit code 2 |
 
 ## Planned
 
 | ID | Procedure | Status |
 |---|---|---|
+| M-04 | Show one hand: 21 points drawn in the right places after mirroring; no hand gives no points; two hands use only one; hand at the frame edge; lower light | Planned (owner to run) |
+| REC-1 | `python scripts/record_landmarks.py --note "..."`: record a few hundred labeled frames | Planned (owner to run) |
 | R-VM | Run Virtual-Mouse with the safety steps in Execution Handbook Section 8.1 and record webcam behavior | Planned (owner to run). Its failsafe is off, so it was not run by the agent. |
 
 ## Blockers
