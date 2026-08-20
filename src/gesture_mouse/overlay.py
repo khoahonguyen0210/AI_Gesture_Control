@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from gesture_mouse.gesture_recognizer import HandObservation, RecognizerOutput
+
 HAND_CONNECTIONS = (
     (0, 1), (1, 2), (2, 3), (3, 4),
     (0, 5), (5, 6), (6, 7), (7, 8),
@@ -49,3 +51,29 @@ def draw_text(
     thick = max(1, round(scale * 2))
     cv2.putText(frame, text, org, font, scale, BLACK, thick + 3, cv2.LINE_AA)
     cv2.putText(frame, text, org, font, scale, color, thick, cv2.LINE_AA)
+
+
+def draw_overlay(
+    frame: np.ndarray,
+    obs: HandObservation | None,
+    out: RecognizerOutput,
+    fps: float,
+    enabled: bool,
+    dry_run: bool,
+    show_debug: bool,
+    help_text: str,
+) -> None:
+    """Draw everything the preview shows. Call it after the tracker has used the frame."""
+    h, w = frame.shape[:2]
+    if obs is not None:
+        draw_landmarks(frame, obs.landmarks)
+    draw_text(frame, out.label, (10, 40), WHITE, scale=1.1)
+    status, color = ("ENABLED", GREEN) if enabled else ("PAUSED", ORANGE)
+    draw_text(frame, status, (10, 75), color)
+    draw_text(frame, f"{fps:4.1f} FPS", (w - 120, 30))
+    if dry_run:
+        draw_text(frame, "DRY RUN: mouse is not moved", (10, 105), ORANGE)
+    if show_debug and out.debug:
+        values = "  ".join(f"{k} {v:.2f}" for k, v in sorted(out.debug.items()))
+        draw_text(frame, values, (10, h - 40), scale=0.5)
+    draw_text(frame, help_text, (10, h - 12), scale=0.5)

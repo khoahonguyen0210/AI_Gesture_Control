@@ -33,12 +33,20 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | 2026-10-09 | 4 | `python -m pytest -q -m hardware` | 2 passed (real camera; real model on a blank frame) |
 | 2026-10-09 | 4 | 90 real camera frames through the real tracker, no window, nothing saved | Ran without errors. 0 frames with a hand (no hand was shown) |
 | 2026-10-09 | 4 | `python scripts/record_landmarks.py --config does_not_exist.toml` | Readable error, exit code 2 |
+| 2026-10-09 | 5 | `python -m pytest -q` | 129 passed, 2 deselected. I-APP-01..07 and U-MET-01..02 pass |
+| 2026-10-09 | 5 | `ruff check .`, `ruff format --check .`, `mypy src` | Pass |
+| 2026-10-09 | 5 | M-03: `python -m gesture_mouse --camera 9 --dry-run` | Pass. "Could not open camera 9. Try another index with --camera ..."; exit code 3 |
+| 2026-10-09 | 5 | M-24 (partial): `run_app` in dry-run with the real camera, model, and preview window, quitting after 90 frames | Pass. Window opened, ran 90 frames, exit code 0, real mouse backend never created. No hand was shown, so gesture labels were not checked |
 
 ## Planned
 
 | ID | Procedure | Status |
 |---|---|---|
 | M-04 | Show one hand: 21 points drawn in the right places after mirroring; no hand gives no points; two hands use only one; hand at the frame edge; lower light | Planned (owner to run) |
+| M-24 | `python -m gesture_mouse --dry-run` with a hand: labels and landmarks follow the hand; the mouse does not move | Planned (owner to run) |
+| M-05 to M-09 | `python -m gesture_mouse`: point moves the cursor; short pinch clicks once; held pinch drags and releases; thumb-middle pinch right-clicks once; two-finger pose scrolls in the expected direction | Planned (owner to run) |
+| M-15, M-16 | Press `p` while pointing and while dragging: control stops, the drag ends; press `p` again to resume | Planned (owner to run) |
+| M-17 | Quit with `q`, then with Esc: window closes, camera light turns off, no button held | Planned (owner to run) |
 | REC-1 | `python scripts/record_landmarks.py --note "..."`: record a few hundred labeled frames | Planned (owner to run) |
 | R-VM | Run Virtual-Mouse with the safety steps in Execution Handbook Section 8.1 and record webcam behavior | Planned (owner to run). Its failsafe is off, so it was not run by the agent. |
 

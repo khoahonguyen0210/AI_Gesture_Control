@@ -9,11 +9,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from gesture_mouse import __version__
+from gesture_mouse.app import EXIT_CONFIG, run_app
 from gesture_mouse.config import AppConfig, Overrides, load_config
 from gesture_mouse.errors import ConfigError
 from gesture_mouse.logging_setup import configure_logging
-
-EXIT_CONFIG = 2
 
 log = logging.getLogger("gesture_mouse")
 
@@ -58,8 +57,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(exc, file=sys.stderr)
         return EXIT_CONFIG
     configure_logging(cfg.logging.level, cfg.logging.file)
-    log.info("Gesture Mouse %s starting (dry run: %s)", __version__, args.dry_run)
-    return 0
+    log.info("Gesture Mouse %s starting", __version__)
+    return run_app(cfg, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
