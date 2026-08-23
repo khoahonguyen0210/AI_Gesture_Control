@@ -16,6 +16,9 @@
 | 2026-10-09 | `PyAutoGuiBackend.mouse_up` turns the failsafe off for the release call only | After the failsafe fires, the cursor is in a corner and a normal `mouseUp` would raise again, leaving the button held | Leave the button held | — |
 | 2026-10-09 | Camera backend `auto` means DirectShow on Windows and the OpenCV default elsewhere | Measured on this laptop: DirectShow opened camera 0 in about 1.9-2.4 s; MSMF and the OpenCV default took about 7-15 s (test log, Phase 3) | Keep the OpenCV default | Set `camera.backend = "msmf"` or change `backend_api` |
 | 2026-10-09 | `Camera.read()` pauses 10 ms between failed reads | A dead device returns at once; the pause keeps the retry from spinning while still ending within a fraction of a second | No pause | Set `READ_RETRY_S = 0` |
+| 2026-10-09 | No camera reopen after `CameraLostError`; release the button and exit with code 3 | ERR-4 allows either. A clean exit is simpler and easy to test | One reopen attempt | Add a retry in `run_app` with a test |
+| 2026-10-09 | Loop watchdog releases any held button after more than `lost_hand_grace_frames` frames without a hand | Second guard beside the recognizer (Execution Handbook Phase 6) | Recognizer only | Remove `_watchdog` |
+| 2026-10-09 | The PyAutoGUI failsafe ends the app with exit code 0 and the message "Emergency stop" | It is a deliberate user action, not a failure | Exit 6 | Change `run_app` |
 | 2026-10-09 | Config errors from the file, the command line, and range checks are reported in one `ConfigError` | Users can fix every problem at once (U-CFG-09) | Stop at the first problem | â€” |
 
 ## Change requests

@@ -81,9 +81,9 @@ class Camera:
         if cap is None or not cap.isOpened():
             self._release_cap(cap)
             raise CameraOpenError(
-                f"Could not open camera {cfg.index}. Try another index with --camera "
-                "(python scripts/list_cameras.py lists them), and check that camera access "
-                "is allowed in the system privacy settings."
+                f"Could not open camera {cfg.index}. Close other apps that may be using it, "
+                "try another index with --camera (python scripts/list_cameras.py lists them), "
+                "and check that camera access is allowed in the system privacy settings."
             )
         self._cap = cap
         for key, value in (("width", cfg.width), ("height", cfg.height), ("fps", cfg.fps)):

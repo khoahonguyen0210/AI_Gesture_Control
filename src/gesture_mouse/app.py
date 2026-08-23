@@ -114,6 +114,7 @@ class GestureMouseApp:
         self.enabled = not cfg.control.start_paused
         self.running = True
         self.frames = 0
+        self._frames_without_hand = 0
         self._pause_code = key_code(cfg.control.pause_key)
         self._quit_codes = {key_code(k) for k in cfg.control.quit_keys}
 
@@ -135,6 +136,7 @@ class GestureMouseApp:
         with m.time("dispatch"):
             for action in out.actions:
                 self.mouse.apply(action)
+            self._watchdog(obs)
         fps = self.fps.tick(self.clock())
         with m.time("draw"):
             self.draw(
@@ -156,6 +158,14 @@ class GestureMouseApp:
         if self.running and not self.display.is_open():
             log.info("Preview window closed")
             self.running = False
+
+    def _watchdog(self, obs: HandObservation | None) -> None:
+        """Second guard, beside the recognizer: never hold a button with no hand in view."""
+        self._frames_without_hand = 0 if obs is not None else self._frames_without_hand + 1
+        grace = self.cfg.gesture.lost_hand_grace_frames
+        if self.mouse.held_buttons and self._frames_without_hand > grace:
+            log.warning("No hand for %d frames with a button held; releasing it", grace)
+            self.mouse.release_all()
 
     def handle_key(self, key: int) -> None:
         if key in self._quit_codes:

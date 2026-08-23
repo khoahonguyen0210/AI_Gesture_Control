@@ -37,6 +37,10 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | 2026-10-09 | 5 | `ruff check .`, `ruff format --check .`, `mypy src` | Pass |
 | 2026-10-09 | 5 | M-03: `python -m gesture_mouse --camera 9 --dry-run` | Pass. "Could not open camera 9. Try another index with --camera ..."; exit code 3 |
 | 2026-10-09 | 5 | M-24 (partial): `run_app` in dry-run with the real camera, model, and preview window, quitting after 90 frames | Pass. Window opened, ran 90 frames, exit code 0, real mouse backend never created. No hand was shown, so gesture labels were not checked |
+| 2026-10-09 | 6 | `python -m pytest -q` | 139 passed, 2 deselected. I-ERR-01..08 and the watchdog test pass |
+| 2026-10-09 | 6 | `ruff check .`, `ruff format --check .`, `mypy src` | Pass |
+| 2026-10-09 | 6 | Forbidden-pattern search: `grep -rn -E "shell=True\|os\.system\|subprocess\|eval\(\|exec\(\|requests\|urllib\|socket\|http\.client\|import pickle\|__import__\|importlib\.import_module" src scripts tests` | `src/`: no matches. `urllib` only in `scripts/fetch_model.py` (allowed). `subprocess` only in three tests that run the same interpreter with fixed code, no shell |
+| 2026-10-09 | 6 | Display scaling check: `pyautogui.size()` vs Windows screen bounds | Windows is at 150% scaling (1280x800 logical). PyAutoGUI calls `SetProcessDPIAware()` on import and reports 1920x1200 physical pixels, so its coordinates are consistent |
 
 ## Planned
 
@@ -46,6 +50,11 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | M-24 | `python -m gesture_mouse --dry-run` with a hand: labels and landmarks follow the hand; the mouse does not move | Planned (owner to run) |
 | M-05 to M-09 | `python -m gesture_mouse`: point moves the cursor; short pinch clicks once; held pinch drags and releases; thumb-middle pinch right-clicks once; two-finger pose scrolls in the expected direction | Planned (owner to run) |
 | M-15, M-16 | Press `p` while pointing and while dragging: control stops, the drag ends; press `p` again to resume | Planned (owner to run) |
+| M-10 to M-13 | Camera unavailable (`--camera 9`, done as M-03), camera in use (open the Windows Camera app first), camera permission off, camera lost mid-run | M-10 executed as M-03. M-11 to M-13: Planned (owner to run). M-13 is covered by I-ERR-04 |
+| M-18 | Move the physical cursor into a screen corner while running: "Emergency stop" and a clean exit | Planned (owner to run) |
+| M-19 | Ctrl+C in the terminal: clean exit with code 130 | Planned (owner to run) |
+| M-20 | Rename `models/hand_landmarker.task`, start the app: model error with the fetch command, exit 4; then restore the file | Planned (owner to run). Covered by I-ERR-05 |
+| M-21 | Config with `pinch_off = 0.1` and an unknown key: all errors listed, exit 2, camera never opened | Planned (owner to run). Covered by I-ERR-07 |
 | M-17 | Quit with `q`, then with Esc: window closes, camera light turns off, no button held | Planned (owner to run) |
 | REC-1 | `python scripts/record_landmarks.py --note "..."`: record a few hundred labeled frames | Planned (owner to run) |
 | R-VM | Run Virtual-Mouse with the safety steps in Execution Handbook Section 8.1 and record webcam behavior | Planned (owner to run). Its failsafe is off, so it was not run by the agent. |
