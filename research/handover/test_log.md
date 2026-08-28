@@ -41,6 +41,26 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | 2026-10-09 | 6 | `ruff check .`, `ruff format --check .`, `mypy src` | Pass |
 | 2026-10-09 | 6 | Forbidden-pattern search: `grep -rn -E "shell=True\|os\.system\|subprocess\|eval\(\|exec\(\|requests\|urllib\|socket\|http\.client\|import pickle\|__import__\|importlib\.import_module" src scripts tests` | `src/`: no matches. `urllib` only in `scripts/fetch_model.py` (allowed). `subprocess` only in three tests that run the same interpreter with fixed code, no shell |
 | 2026-10-09 | 6 | Display scaling check: `pyautogui.size()` vs Windows screen bounds | Windows is at 150% scaling (1280x800 logical). PyAutoGUI calls `SetProcessDPIAware()` on import and reports 1920x1200 physical pixels, so its coordinates are consistent |
+| 2026-10-09 | 7 | `python -m pytest -q` | 145 passed, 2 deselected (adds evaluation-script tests) |
+| 2026-10-09 | 7 | `python scripts/evaluate_gestures.py` on a synthetic recording made from the test hands | Script runs and saves JSON. Synthetic data only checks the script; it is not an evaluation result |
+| 2026-10-09 | 7 | `python scripts/benchmark.py --frames 2000 --warmup 100 --no-show --output output/benchmarks/run-01-no-hand.json` | See "Benchmark run-01" below |
+
+### Benchmark run-01 (no hand)
+
+Software pipeline latency measured on the machine in `output/benchmarks/machine.txt` (ThinkPad X1 Yoga, i7-1260P, plugged in, Balanced power plan, evening room light, DirectShow, 640x480) on 2026-10-09. No hand was in view; the preview window was off, so the display stage is near zero. Not end-to-end latency.
+
+| Stage | Median ms | 95th percentile ms | Max ms |
+|---|---|---|---|
+| capture | 48.34 | 69.51 | 93.18 |
+| preprocess (mirror) | 3.73 | 4.60 | 110.52 |
+| inference | 46.20 | 62.23 | 1041.68 |
+| recognize | 0.01 | 0.02 | 0.06 |
+| dispatch | 0.00 | 0.01 | 0.05 |
+| draw | 0.46 | 0.71 | 2.40 |
+| display | 0.00 | 0.00 | 0.01 |
+| total | 100.27 | 120.32 | 1052.34 |
+
+2000 frames in 204.0 s, so 9.8 FPS achieved, against 30 FPS reported by the driver. Failed reads: 0 (0%). Frames with a hand: 0. The capture stage waits for the camera; a likely cause (a hypothesis, not tested) is longer exposure in low light. The run with a hand moving through the gestures still needs the owner.
 
 ## Planned
 
@@ -57,6 +77,8 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | M-21 | Config with `pinch_off = 0.1` and an unknown key: all errors listed, exit 2, camera never opened | Planned (owner to run). Covered by I-ERR-07 |
 | M-17 | Quit with `q`, then with Esc: window closes, camera light turns off, no button held | Planned (owner to run) |
 | REC-1 | `python scripts/record_landmarks.py --note "..."`: record a few hundred labeled frames | Planned (owner to run) |
+| BENCH-2 | `python scripts/benchmark.py --frames 2000 --warmup 100 --note "hand moving through gestures"` | Planned (owner to run) |
+| EVAL-1 | Record several labeled sessions, then `python scripts/evaluate_gestures.py --input "output/recordings/*.jsonl"`; keep tuning and reporting sessions apart | Planned (owner to run) |
 | R-VM | Run Virtual-Mouse with the safety steps in Execution Handbook Section 8.1 and record webcam behavior | Planned (owner to run). Its failsafe is off, so it was not run by the agent. |
 
 ## Blockers

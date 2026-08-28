@@ -68,6 +68,7 @@ class Camera:
         self._cap: Any = None
         self._first_frame: np.ndarray | None = None
         self._failures = 0
+        self.failed_reads = 0
         self._last_ts = -1
         self.reported: dict[str, float] = {}
         self.open_ms: int | None = None
@@ -132,6 +133,7 @@ class Camera:
                 self._failures = 0
                 return np.asarray(frame), self._stamp()
             self._failures += 1
+            self.failed_reads += 1
             log.debug("Camera read failed (%d in a row)", self._failures)
             if self._failures >= self.cfg.max_consecutive_failures:
                 raise CameraLostError(

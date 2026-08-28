@@ -96,6 +96,7 @@ def test_u_cam_04_transient_failures_recover() -> None:
     cap.reads = [False, False, False, True, False, False, False, True]
     cam.read()
     cam.read()
+    assert cam.failed_reads == 6
 
 
 def test_u_cam_05_too_many_failures_raises_camera_lost() -> None:
