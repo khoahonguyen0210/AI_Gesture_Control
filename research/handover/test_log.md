@@ -44,6 +44,15 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | 2026-10-09 | 7 | `python -m pytest -q` | 145 passed, 2 deselected (adds evaluation-script tests) |
 | 2026-10-09 | 7 | `python scripts/evaluate_gestures.py` on a synthetic recording made from the test hands | Script runs and saves JSON. Synthetic data only checks the script; it is not an evaluation result |
 | 2026-10-09 | 7 | `python scripts/benchmark.py --frames 2000 --warmup 100 --no-show --output output/benchmarks/run-01-no-hand.json` | See "Benchmark run-01" below |
+| 2026-10-09 | 8 | CI steps run locally: `pip check`, `ruff check .`, `ruff format --check .`, `mypy src`, `pytest -q -m "not hardware"` | Pass |
+| 2026-10-09 | 8 | Full test suite with `cv2`, `mediapipe`, and `pyautogui` blocked from import | 145 passed, 2 deselected. The suite needs no camera, display, or model |
+| 2026-10-09 | 8 | GitHub Actions run | Not run. The project is local only and has not been pushed |
+| 2026-10-09 | 8 | Clean environment: new Python 3.12 venv, `pip install -e ".[dev]"`, `pip check`, `fetch_model.py`, `pytest -q`, `ruff check .`, `ruff format --check .`, `mypy src` | All pass. 145 passed, 2 deselected. Installed versions match `requirements.lock.txt` exactly. The model was already present, so the fetch step reused it |
+| 2026-10-09 | 8 | Dry-run launch from the clean environment, quitting with Esc after 60 frames | Pass. Exit code 0 |
+| 2026-10-09 | 8 | Imports used by `src` and `scripts` | cv2, mediapipe, numpy, pyautogui are all used; no unused dependency |
+| 2026-10-09 | 8 | `git ls-files` check for clones, environments, models, output, handbooks | None tracked; all ignored |
+| 2026-10-09 | 8 | Search for unfinished-work markers in `src`, `tests`, `scripts`, `config`, `.github` | None |
+| 2026-10-09 | 8 | Privacy and security search of tracked files and history: local paths, emails, keys and tokens, image or video writes, network calls | No paths, emails, or keys. No image or video is ever written. Only network call: `scripts/fetch_model.py`. Commit author email will be public if pushed |
 
 ### Benchmark run-01 (no hand)
 
@@ -83,7 +92,9 @@ Software pipeline latency measured on the machine in `output/benchmarks/machine.
 
 ## Blockers
 
-None.
+| ID | Date | Description | What is blocked | What continues |
+|---|---|---|---|---|
+| B-1 | 2026-10-09 | The agent cannot hold a hand in front of the webcam | Manual rows M-04 to M-09, M-11, M-12, M-14 to M-24, BENCH-2, EVAL-1 | Everything automated; owner checklist in `HANDOVER_REPORT.md` |
 
 ## Assumptions
 

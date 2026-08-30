@@ -19,6 +19,9 @@
 | 2026-10-09 | No camera reopen after `CameraLostError`; release the button and exit with code 3 | ERR-4 allows either. A clean exit is simpler and easy to test | One reopen attempt | Add a retry in `run_app` with a test |
 | 2026-10-09 | Loop watchdog releases any held button after more than `lost_hand_grace_frames` frames without a hand | Second guard beside the recognizer (Execution Handbook Phase 6) | Recognizer only | Remove `_watchdog` |
 | 2026-10-09 | The PyAutoGUI failsafe ends the app with exit code 0 and the message "Emergency stop" | It is a deliberate user action, not a failure | Exit 6 | Change `run_app` |
+| 2026-10-09 | CI uses `actions/checkout@v7` and `actions/setup-python@v7` | Latest major tags on 2026-10-09 (`git ls-remote`); both v7 tags date from July 2026 | v6 | Change the tags in `ci.yml` |
+| 2026-10-09 | CI does not swap to headless OpenCV on Linux | mediapipe requires `opencv-contrib-python`, so removing it breaks `pip check`; the tests never import `cv2` (checked by blocking it) | Handbook swap step | Add the step back |
+| 2026-10-09 | CI workflow has read-only `contents` permission and no secrets | Least privilege | Default permissions | Remove the `permissions` block |
 | 2026-10-09 | Config errors from the file, the command line, and range checks are reported in one `ConfigError` | Users can fix every problem at once (U-CFG-09) | Stop at the first problem | â€” |
 
 ## Change requests
