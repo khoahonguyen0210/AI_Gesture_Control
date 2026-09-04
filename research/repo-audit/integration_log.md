@@ -22,6 +22,10 @@
 | 2026-10-09 | CI uses `actions/checkout@v7` and `actions/setup-python@v7` | Latest major tags on 2026-10-09 (`git ls-remote`); both v7 tags date from July 2026 | v6 | Change the tags in `ci.yml` |
 | 2026-10-09 | CI does not swap to headless OpenCV on Linux | mediapipe requires `opencv-contrib-python`, so removing it breaks `pip check`; the tests never import `cv2` (checked by blocking it) | Handbook swap step | Add the step back |
 | 2026-10-09 | CI workflow has read-only `contents` permission and no secrets | Least privilege | Default permissions | Remove the `permissions` block |
+| 2026-10-09 | Version lives only in `pyproject.toml`; `__version__` reads the installed package metadata | Extension D: one place for the version | Keep two copies | Restore the literal in `__init__.py` |
+| 2026-10-09 | Build backend requires `setuptools>=77` | `license = "MIT"` (an SPDX expression) and `license-files` need setuptools 77 or newer | Old `License ::` classifiers | Lower the bound and switch to classifiers |
+| 2026-10-09 | `MANIFEST.in` adds test helpers, `config/default.toml`, scripts, and the lock file to the sdist | Without them, the tests inside the sdist fail | Leave the sdist without tests | Delete `MANIFEST.in` |
+| 2026-10-09 | Release workflow uses `gh release create` with the built-in `github.token`; it checks that the tag matches the package version | No stored secrets and no third-party release action | A marketplace release action | Edit `release.yml` |
 | 2026-10-09 | Config errors from the file, the command line, and range checks are reported in one `ConfigError` | Users can fix every problem at once (U-CFG-09) | Stop at the first problem | â€” |
 
 ## Change requests
@@ -31,6 +35,8 @@
 | 2026-10-09 | Add `README.md` | Owner request. Overrides the handbook rule "do not create README.md". | README, Definition of Done item 8 |
 | 2026-10-09 | Keep the handbooks out of Git | Owner request (`project-context/` is ignored) | Handbook commit step in Phase 0 |
 | 2026-10-09 | Replace `opencv-python` with `opencv-contrib-python` | See Decisions | `pyproject.toml`, CI |
+| 2026-10-09 | Start the extension plan (D, E, A0, A1; B and C only if their gate is met) before the MVP Definition of Done is fully met | Owner instruction ("just follow it"). This is the owner's written exception to the MVP gate (Extension Plan rule 3). Open MVP items: the manual webcam tests | `extensions/`, `firmware/`, workflows, records |
+| 2026-10-09 | Add `build` as a development dependency | Extension D. License MIT (`build` 1.6.1, `pyproject_hooks` 1.3.3) | `pyproject.toml` |
 
 ## Integrations
 

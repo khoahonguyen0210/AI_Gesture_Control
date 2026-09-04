@@ -79,12 +79,18 @@ def test_u_ht_05_close_twice_is_safe(tmp_path: Path) -> None:
     assert closed == [1]
 
 
-def test_relative_model_path_resolves_against_project(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_relative_model_path_resolves_against_project(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     from gesture_mouse import hand_tracker
 
-    monkeypatch.chdir(Path(__file__).parent)
-    resolved = hand_tracker.resolve_model_path("pyproject.toml")
-    assert resolved == hand_tracker.PROJECT_ROOT / "pyproject.toml"
+    root = tmp_path / "project"
+    (root / "models").mkdir(parents=True)
+    (root / "models" / "m.task").write_bytes(b"x")
+    monkeypatch.setattr(hand_tracker, "PROJECT_ROOT", root)
+    monkeypatch.chdir(tmp_path)
+    assert hand_tracker.resolve_model_path("models/m.task") == root / "models" / "m.task"
+    assert hand_tracker.resolve_model_path("models/none.task") == Path("models/none.task")
 
 
 @pytest.mark.hardware

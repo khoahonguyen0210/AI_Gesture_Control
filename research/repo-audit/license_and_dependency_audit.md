@@ -14,6 +14,8 @@ Resolved on 2026-10-09 with Python 3.12.10 on Windows 11. `pip check` reported "
 | pytest-cov | 7.1.0 | MIT | Coverage (dev) |
 | ruff | 0.17.0 | MIT | Lint and format (dev) |
 | mypy | 2.4.0 | MIT | Type checks (dev) |
+| build | 1.6.1 | MIT | Builds the sdist and wheel (dev, Extension D) |
+| pyproject_hooks | 1.3.3 | MIT | Needed by `build` |
 
 Notes:
 

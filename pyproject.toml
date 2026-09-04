@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,8 @@ name = "gesture-mouse"
 version = "0.1.0"
 description = "Real-time webcam hand-gesture mouse control. Local processing only."
 license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.txt"]
+readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
   "mediapipe>=1.1.0",
@@ -16,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.17.0", "mypy>=2.4.0"]
+dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.17.0", "mypy>=2.4.0", "build>=1.6.1"]
 
 [project.scripts]
 gesture-mouse = "gesture_mouse.__main__:main"

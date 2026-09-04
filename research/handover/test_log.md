@@ -53,6 +53,11 @@ Machine for all entries unless stated: Lenovo ThinkPad X1 Yoga, Windows 11 Pro 1
 | 2026-10-09 | 8 | `git ls-files` check for clones, environments, models, output, handbooks | None tracked; all ignored |
 | 2026-10-09 | 8 | Search for unfinished-work markers in `src`, `tests`, `scripts`, `config`, `.github` | None |
 | 2026-10-09 | 8 | Privacy and security search of tracked files and history: local paths, emails, keys and tokens, image or video writes, network calls | No paths, emails, or keys. No image or video is ever written. Only network call: `scripts/fetch_model.py`. Commit author email will be public if pushed |
+| 2026-10-09 | Ext D | `python -m build` | Built `gesture_mouse-0.1.0.tar.gz` and `gesture_mouse-0.1.0-py3-none-any.whl` |
+| 2026-10-09 | Ext D | Wheel contents (`zipfile` listing) | 13 package modules plus `licenses/LICENSE` and `licenses/THIRD_PARTY_NOTICES.txt`; no models, data, or records |
+| 2026-10-09 | Ext D | sdist contents | First build lacked `tests/helpers.py`, `tests/fakes.py`, `config/default.toml`, and the scripts; fixed with `MANIFEST.in`. Second build: 53 entries including them |
+| 2026-10-09 | Ext D | New venv: `pip install dist/*.whl pytest`, `gesture-mouse --version`, `pip check`, `pytest -q` | `gesture-mouse 0.1.0`; package imported from site-packages; no broken requirements; 145 passed, 2 deselected |
+| 2026-10-09 | Ext D | Release workflow run | Not run. It runs only on a pushed `v*` tag; no tag was made (needs owner approval) |
 
 ### Benchmark run-01 (no hand)
 
