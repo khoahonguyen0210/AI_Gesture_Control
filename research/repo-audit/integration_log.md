@@ -14,7 +14,7 @@
 | 2026-10-09 | Pinch hold time counts from the first pinch frame, not the debounced entry | The drag starts when the user expects | Count from the debounced entry | — |
 | 2026-10-09 | Cursor anchoring as recommended: the click lands on the last pointer position; a drag moves by the change of the thumb-index midpoint | Bible Section 10, rule 5 | Click at the current index tip | — |
 | 2026-10-09 | `PyAutoGuiBackend.mouse_up` turns the failsafe off for the release call only | After the failsafe fires, the cursor is in a corner and a normal `mouseUp` would raise again, leaving the button held | Leave the button held | — |
-| 2026-10-09 | Camera backend `auto` means DirectShow on Windows and the OpenCV default elsewhere | Measured on this laptop: DirectShow opened camera 0 in about 1.9-2.4 s; MSMF and the OpenCV default took about 7-15 s (test log, Phase 3) | Keep the OpenCV default | Set `camera.backend = "msmf"` or change `backend_api` |
+| 2026-10-09 | (Replaced by the next row) Camera backend `auto` means DirectShow on Windows | Measured on this laptop: DirectShow opened camera 0 in about 1.9-2.4 s; MSMF and the OpenCV default took about 7-15 s (test log, Phase 3) | Keep the OpenCV default | Set `camera.backend = "msmf"` or change `backend_api` |
 | 2026-10-09 | `Camera.read()` pauses 10 ms between failed reads | A dead device returns at once; the pause keeps the retry from spinning while still ending within a fraction of a second | No pause | Set `READ_RETRY_S = 0` |
 | 2026-10-09 | No camera reopen after `CameraLostError`; release the button and exit with code 3 | ERR-4 allows either. A clean exit is simpler and easy to test | One reopen attempt | Add a retry in `run_app` with a test |
 | 2026-10-09 | Loop watchdog releases any held button after more than `lost_hand_grace_frames` frames without a hand | Second guard beside the recognizer (Execution Handbook Phase 6) | Recognizer only | Remove `_watchdog` |
@@ -26,6 +26,12 @@
 | 2026-10-09 | Build backend requires `setuptools>=77` | `license = "MIT"` (an SPDX expression) and `license-files` need setuptools 77 or newer | Old `License ::` classifiers | Lower the bound and switch to classifiers |
 | 2026-10-09 | `MANIFEST.in` adds test helpers, `config/default.toml`, scripts, and the lock file to the sdist | Without them, the tests inside the sdist fail | Leave the sdist without tests | Delete `MANIFEST.in` |
 | 2026-10-09 | Release workflow uses `gh release create` with the built-in `github.token`; it checks that the tag matches the package version | No stored secrets and no third-party release action | A marketplace release action | Edit `release.yml` |
+| 2026-10-09 | Camera backend `auto` is OpenCV's default again (MSMF on Windows) | Extension E: DirectShow opens faster but delivers only 9.9 frames/s on this camera; MSMF delivers 30.1. Frame rate matters more than start time | DirectShow | Set `camera.backend = "dshow"` |
+| 2026-10-09 | Camera properties are set only when the driver reports a different value | Each `set` took seconds on MSMF (9.1 s in the profile); open time fell to about 3-4 s | Always set | Remove the check in `Camera.open` |
+| 2026-10-09 | The first-frame timeout starts after the device opens | A slow open must not use up the time meant for the first frame | Count from before the open | — |
+| 2026-10-09 | Mirror with `cv2.flip`; convert colors with `cv2.cvtColor` | Extension E-H2: 0.25 ms instead of about 3 ms per frame. The mirror function is injectable so tests need no OpenCV | NumPy copies | Pass a NumPy mirror |
+| 2026-10-09 | New CLI option `--max-frames N` | Extension E: lets a profiling run stop by itself | Stop with a key | Remove the option |
+| 2026-10-09 | No C++ or Rust code | Extension E-H4: the profile shows no pure-Python bottleneck | Native module | — |
 | 2026-10-09 | Config errors from the file, the command line, and range checks are reported in one `ConfigError` | Users can fix every problem at once (U-CFG-09) | Stop at the first problem | â€” |
 
 ## Change requests

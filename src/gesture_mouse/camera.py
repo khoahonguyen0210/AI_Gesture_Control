@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 import time
 from collections.abc import Callable
 from types import TracebackType
@@ -34,15 +33,10 @@ def opencv_capture(index: int, api: int | None) -> Any:
     return cv2.VideoCapture(index) if api is None else cv2.VideoCapture(index, api)
 
 
-def backend_api(name: str, platform: str = sys.platform) -> int | None:
-    """Map a backend name to an OpenCV API constant. None means OpenCV's default.
-
-    "auto" picks DirectShow on Windows, which opened the camera fastest in our tests.
-    """
+def backend_api(name: str) -> int | None:
+    """Map a backend name to an OpenCV API constant. None means OpenCV's default."""
     if name not in BACKEND_NAMES:
         raise ConfigError(f"unknown camera backend {name!r}")
-    if name == "auto" and platform == "win32":
-        name = "dshow"
     attr = BACKEND_NAMES[name]
     if attr is None:
         return None
@@ -88,10 +82,12 @@ class Camera:
             )
         self._cap = cap
         for key, value in (("width", cfg.width), ("height", cfg.height), ("fps", cfg.fps)):
-            cap.set(PROPS[key], value)
+            # Setting a property can take seconds on some drivers, so skip it when already right.
+            if round(float(cap.get(PROPS[key]))) != value:
+                cap.set(PROPS[key], value)
         self.reported = {key: float(cap.get(prop)) for key, prop in PROPS.items()}
 
-        frame = self._wait_first_frame(start)
+        frame = self._wait_first_frame(self._clock())
         if frame is None:
             self.release()
             raise CameraOpenError(

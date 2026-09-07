@@ -32,6 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="how much to log (default INFO)",
     )
+    parser.add_argument(
+        "--max-frames", type=int, help="stop after this many frames (for profiling and tests)"
+    )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
 
@@ -58,7 +61,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_CONFIG
     configure_logging(cfg.logging.level, cfg.logging.file)
     log.info("Gesture Mouse %s starting", __version__)
-    return run_app(cfg, dry_run=args.dry_run)
+    if args.max_frames is not None and args.max_frames <= 0:
+        print("--max-frames must be greater than 0", file=sys.stderr)
+        return EXIT_CONFIG
+    return run_app(cfg, dry_run=args.dry_run, max_frames=args.max_frames)
 
 
 if __name__ == "__main__":

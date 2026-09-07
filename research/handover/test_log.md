@@ -106,3 +106,36 @@ Software pipeline latency measured on the machine in `output/benchmarks/machine.
 | ID | Date | Assumption | How to confirm |
 |---|---|---|---|
 | A-1 | 2026-10-09 | The built-in camera is index 0 | Confirmed by `python scripts/list_cameras.py` (Phase 3) |
+
+### Extension E: profiling-driven optimization
+
+Same machine as run-01 (`output/benchmarks/machine.txt`), 2026-10-09, evening room light, no hand in view, preview window off. Software pipeline latency, not end-to-end latency.
+
+**Measurements before any change**
+
+| Check | Result |
+|---|---|
+| Camera only, DirectShow, 300 frames | 9.9 frames/s (median gap 96.5 ms). The pipeline in run-01 (9.8 FPS) was limited by the camera, not the code |
+| Camera only, 150 frames each | MSMF 30.1 frames/s; DirectShow 9.9 frames/s |
+| DirectShow asked for MJPG or YUY2 | The camera stays in YUY2 at 9.9 frames/s |
+| Mirror and color conversion, 640x480, 500 runs | NumPy mirror 1.700 ms vs `cv2.flip` 0.135 ms; NumPy BGR to RGB 1.484 ms vs `cv2.cvtColor` 0.615 ms |
+
+**Hypotheses, written before each change, and results**
+
+| ID | Change | Success criterion | Result |
+|---|---|---|---|
+| E-H1 | Use MSMF (OpenCV default) instead of DirectShow on Windows | Achieved FPS at least 15 and total median at most 70 ms | Met. run-02: 19.47 FPS, total median 56.21 ms (run-01: 9.8 FPS, 100.27 ms) |
+| E-H2 | `cv2.flip` and `cv2.cvtColor` instead of NumPy copies | Mirror stage median at most 1 ms | Met. run-03: 0.25 ms (run-02: 3.08 ms). Total FPS in run-03 was 16.41, because inference was slower in that run (median 44.54 vs 37.94 ms); this is run-to-run variation and is not credited to or blamed on the change |
+| E-H3 | Set camera properties only when the driver reports a different value | MSMF open time at most 5 s | Met. 3277, 3968, 2954 ms (before: 6951 to 14817 ms). Camera still 30.2 frames/s at 640x480 |
+| E-H4 | Rewrite a stage in C++ or Rust | A pure-Python stage is the bottleneck | Rejected. cProfile of 300 dry-run frames (`python -m cProfile -o output/profile.out -m gesture_mouse --dry-run --max-frames 300`): MediaPipe native inference 16.2 s, camera property setting 9.1 s (startup), camera reads 4.9 s, `waitKey` 1.8 s. Project Python code is not near the top |
+
+| Stage (median ms) | run-01 DirectShow | run-02 MSMF | run-03 MSMF + OpenCV mirror |
+|---|---|---|---|
+| capture | 48.34 | 8.53 | 10.69 |
+| preprocess | 3.73 | 3.08 | 0.25 |
+| inference | 46.20 | 37.94 | 44.54 |
+| total | 100.27 | 56.21 | 58.24 |
+| total, 95th percentile | 120.32 | 88.45 | 96.89 |
+| achieved FPS | 9.8 | 19.47 | 16.41 |
+
+Tests after the changes: `python -m pytest -q` 149 passed, 2 deselected; `ruff`, `ruff format --check`, `mypy src` pass; the suite also passes with `cv2`, `mediapipe`, and `pyautogui` blocked.

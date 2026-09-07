@@ -84,6 +84,13 @@ class OpenCvDisplay:
         self._cv2.destroyAllWindows()
 
 
+def mirror_frame(frame: np.ndarray) -> np.ndarray:
+    """Flip left to right so moving the hand right moves the cursor right."""
+    import cv2
+
+    return np.asarray(cv2.flip(frame, 1))
+
+
 def key_code(name: str) -> int:
     return 27 if name == "Esc" else ord(name)
 
@@ -99,6 +106,8 @@ class GestureMouseApp:
         dry_run: bool = False,
         draw: Callable[..., None] = draw_overlay,
         clock: Callable[[], float] = time.perf_counter,
+        max_frames: int | None = None,
+        mirror: Callable[[np.ndarray], np.ndarray] = mirror_frame,
     ) -> None:
         self.cfg = cfg
         self.camera = camera
@@ -114,6 +123,8 @@ class GestureMouseApp:
         self.enabled = not cfg.control.start_paused
         self.running = True
         self.frames = 0
+        self.max_frames = max_frames
+        self.mirror = mirror
         self._frames_without_hand = 0
         self._pause_code = key_code(cfg.control.pause_key)
         self._quit_codes = {key_code(k) for k in cfg.control.quit_keys}
@@ -128,7 +139,7 @@ class GestureMouseApp:
         with m.time("capture"):
             frame, t_ms = self.camera.read()
         with m.time("preprocess"):
-            frame = np.ascontiguousarray(frame[:, ::-1])
+            frame = self.mirror(frame)
         with m.time("inference"):
             obs = self.tracker.detect(frame, t_ms)
         with m.time("recognize"):
@@ -155,6 +166,8 @@ class GestureMouseApp:
         m.add("total", (self.clock() - start) * 1000.0)
         self.frames += 1
         self.handle_key(key)
+        if self.max_frames is not None and self.frames >= self.max_frames:
+            self.running = False
         if self.running and not self.display.is_open():
             log.info("Preview window closed")
             self.running = False
@@ -185,6 +198,8 @@ def run_app(
     backend_factory: Callable[[], MouseBackend] = PyAutoGuiBackend,
     display_factory: Callable[[str], Display] = OpenCvDisplay,
     draw: Callable[..., None] = draw_overlay,
+    max_frames: int | None = None,
+    mirror: Callable[[np.ndarray], np.ndarray] = mirror_frame,
 ) -> int:
     """Start everything in the required order, run the loop, and always shut down."""
     tracker: TrackerLike | None = None
@@ -199,7 +214,17 @@ def run_app(
         camera.open()
         tracker.start()
         display = display_factory(cfg.ui.window_title)
-        app = GestureMouseApp(cfg, camera, tracker, mouse, display, dry_run, draw)
+        app = GestureMouseApp(
+            cfg,
+            camera,
+            tracker,
+            mouse,
+            display,
+            dry_run,
+            draw,
+            max_frames=max_frames,
+            mirror=mirror,
+        )
         log.info("Running%s. %s", " in dry-run mode" if dry_run else "", HELP_TEXT)
         app.run()
         log.info("Stopped after %d frames", app.frames)

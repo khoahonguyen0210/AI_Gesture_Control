@@ -4,11 +4,11 @@
 
 [camera]
 index = 0                       # webcam number; the built-in camera is usually 0
-backend = "auto"                # "auto", "dshow", or "msmf" (Windows only)
+backend = "auto"                # "auto" (OpenCV's choice), "dshow", or "msmf" (Windows only)
 width = 640                     # requested frame width in pixels
 height = 480                    # requested frame height in pixels
 fps = 30                        # requested frames per second
-open_timeout_ms = 3000          # wait this long for the first frame
+open_timeout_ms = 3000          # after the camera opens, wait this long for the first frame
 max_consecutive_failures = 30   # failed reads in a row before the camera counts as lost
 
 [tracker]

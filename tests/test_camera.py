@@ -148,10 +148,10 @@ def test_capture_factory_gets_index() -> None:
     assert seen == [(2, 1400)]
 
 
-def test_auto_backend_is_dshow_on_windows_only() -> None:
-    assert backend_api("auto", "win32") == 700
-    assert backend_api("auto", "linux") is None
-    assert backend_api("dshow", "linux") == 700
+def test_backend_names_map_to_opencv_constants() -> None:
+    assert backend_api("auto") is None
+    assert backend_api("dshow") == 700
+    assert backend_api("msmf") == 1400
 
 
 def test_unknown_backend_rejected() -> None:
@@ -168,3 +168,34 @@ def test_real_camera_opens_and_releases(monkeypatch: pytest.MonkeyPatch) -> None
     assert frame.ndim == 3
     cam.release()
     cam.release()
+
+
+def test_first_frame_timeout_starts_after_a_slow_open() -> None:
+    clock = Clock(step=10)
+    cap = FakeCapture(reads=[False, True])
+
+    def slow_open(index: int, api: int | None) -> FakeCapture:
+        clock.t += 10_000
+        return cap
+
+    cam = Camera(CameraConfig(open_timeout_ms=100), capture_factory=slow_open, clock_ms=clock)
+    cam.open()
+    assert cam.open_ms is not None and cam.open_ms >= 10_000
+
+
+def test_properties_already_right_are_not_set_again() -> None:
+    cap = FakeCapture()
+    cap.props = {PROPS["width"]: 640.0, PROPS["height"]: 480.0, PROPS["fps"]: 30.00003}
+    calls: list[int] = []
+    original = cap.set
+
+    def spy(prop: int, value: float) -> bool:
+        calls.append(prop)
+        return original(prop, value)
+
+    cap.set = spy  # type: ignore[method-assign]
+    camera(cap).open()
+    assert calls == []
+    cap.props[PROPS["width"]] = 1280.0
+    camera(cap).open()
+    assert calls == [PROPS["width"]]

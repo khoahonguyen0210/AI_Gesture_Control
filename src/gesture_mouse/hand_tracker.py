@@ -60,11 +60,13 @@ class HandTracker:
         self.model_path = check_model(cfg.model_path)
         self._landmarker: Any = None
         self._mp: Any = None
+        self._cv2: Any = None
         self._last_ts = -1
 
     def start(self) -> None:
         """Load MediaPipe and the model. Kept apart from __init__ so a missing model fails first."""
         os.environ.setdefault("GLOG_minloglevel", "2")
+        import cv2
         import mediapipe as mp
         from mediapipe.tasks.python import BaseOptions, vision
 
@@ -77,6 +79,7 @@ class HandTracker:
             min_tracking_confidence=self.cfg.min_tracking_confidence,
         )
         self._mp = mp
+        self._cv2 = cv2
         self._landmarker = vision.HandLandmarker.create_from_options(options)
         log.info("Hand model loaded from %s", self.model_path)
 
@@ -89,7 +92,7 @@ class HandTracker:
     def detect(self, frame_bgr: np.ndarray, timestamp_ms: int) -> HandObservation | None:
         if self._landmarker is None:
             self.start()
-        rgb = np.ascontiguousarray(frame_bgr[:, :, ::-1])
+        rgb = self._cv2.cvtColor(frame_bgr, self._cv2.COLOR_BGR2RGB)
         image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb)
         result = self._landmarker.detect_for_video(image, self.next_timestamp(timestamp_ms))
         return observation_from_result(result)

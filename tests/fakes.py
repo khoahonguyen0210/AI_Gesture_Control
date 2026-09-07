@@ -115,7 +115,9 @@ class World:
 
         return Display()
 
-    def run(self, cfg: AppConfig | None = None, dry_run: bool = False) -> int:
+    def run(
+        self, cfg: AppConfig | None = None, dry_run: bool = False, max_frames: int | None = None
+    ) -> int:
         return run_app(
             cfg or AppConfig(),
             dry_run,
@@ -124,6 +126,8 @@ class World:
             backend_factory=self.backend,
             display_factory=self.display,
             draw=lambda *args: None,
+            max_frames=max_frames,
+            mirror=lambda frame: np.ascontiguousarray(frame[:, ::-1]),
         )
 
     def shutdown_events(self) -> list[Any]:

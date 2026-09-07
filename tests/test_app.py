@@ -167,3 +167,14 @@ def test_importing_the_app_loads_no_hardware_library() -> None:
     )
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "[]"
+
+
+def test_max_frames_stops_the_loop() -> None:
+    world = World([POINT] * 20)
+    assert world.run(max_frames=7) == EXIT_OK
+    assert world.frame == 7
+
+
+def test_max_frames_must_be_positive(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["--max-frames", "0"]) == 2
+    assert "--max-frames" in capsys.readouterr().err

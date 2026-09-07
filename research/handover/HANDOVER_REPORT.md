@@ -82,17 +82,17 @@ Last full run: see the Phase 8 clean-environment entry in `test_log.md` (145 pas
 
 ## 6. Performance results
 
-Software pipeline latency, measured on the machine above on 2026-10-09 (plugged in, Balanced power plan, evening room light, DirectShow, 640x480, no hand in view, preview window off). These are not end-to-end latency figures.
+Software pipeline latency, measured on the machine above on 2026-10-09 (plugged in, Balanced power plan, evening room light, 640x480, no hand in view, preview window off). These are not end-to-end latency figures.
 
-| Stage | Median ms | 95th percentile ms | Max ms |
+| Median ms | run-01 DirectShow | run-02 MSMF | run-03 MSMF + OpenCV mirror (current code) |
 |---|---|---|---|
-| capture | 48.34 | 69.51 | 93.18 |
-| inference | 46.20 | 62.23 | 1041.68 |
-| total | 100.27 | 120.32 | 1052.34 |
+| capture | 48.34 | 8.53 | 10.69 |
+| preprocess | 3.73 | 3.08 | 0.25 |
+| inference | 46.20 | 37.94 | 44.54 |
+| total | 100.27 | 56.21 | 58.24 |
+| achieved FPS | 9.8 | 19.47 | 16.41 |
 
-2000 frames in 204.0 s: 9.8 FPS achieved, against 30 FPS reported by the driver; 0 failed reads. The full table is in `test_log.md`. The run with a hand in view was not collected.
-
-Camera open time on this laptop (three runs each): DirectShow 1864 to 2380 ms; MSMF 6951 to 7822 ms; OpenCV default 7510 to 14817 ms. So the app uses DirectShow by default on Windows.
+Each run was 2000 frames with 0 failed reads. The DirectShow camera path delivered only 9.9 frames/s, so the app now uses MSMF (30 frames/s). Inference speed varied between runs; run-02 and run-03 differ mainly there. Camera open time is now about 3-4 s. Details, hypotheses, and the profile are in `test_log.md` (Extension E). The run with a hand in view was not collected.
 
 ## 7. Recognition evaluation
 
@@ -125,13 +125,13 @@ Open question: the redistribution terms of `hand_landmarker.task` are not stated
 | Python software engineering | Tested | Package, `pyproject.toml`; pytest, ruff, mypy pass | One mid-size app |
 | Computer vision and hand landmarks | Implemented | `hand_tracker.py`; real model runs on real frames | Landmark quality on a real hand not checked (M-04); pretrained model, none trained |
 | Gesture interpretation | Tested (automated) | `geometry.py`, `gesture_recognizer.py`; unit tests | Rule-based; no real-hand evaluation yet |
-| Real-time frame processing | Tested | Benchmark run-01 | Software pipeline time only; one machine; no hand |
+| Real-time frame processing | Tested | Benchmark runs 01-03 | Software pipeline time only; one machine; no hand |
 | Camera integration | Tested | Fake-capture tests; M-01 to M-03 | Built-in webcam through OpenCV only |
 | Operating-system input | Tested (fakes only) | Mouse controller tests; DPI check | Real mouse not driven yet (M-05 to M-09) |
 | State management and safety | Tested | State-machine, watchdog, shutdown, failsafe tests | No formal safety analysis |
 | Unit and integration testing | Tested | 145 tests | Hardware behavior only in manual tests |
 | Debugging and resource management | Tested | Shutdown-order tests; repeated camera open | No long soak test |
-| Performance measurement | Tested | `metrics.py`, `benchmark.py`, run-01 | One machine, one condition |
+| Performance measurement and engineering | Tested | `metrics.py`, `benchmark.py`, runs 01-03, cProfile, three tested hypotheses | One machine; no hand in view |
 | Dependency and license management | Tested | `pip check`, audit files, lock file | Not legal advice; model terms unverified |
 | Git and automated checks | Implemented | Git history; `ci.yml`; CI steps pass locally | GitHub Actions has not run (not pushed) |
 | Privacy and security | Tested | Search of code and history (test log, Phase 8) | No external audit |
@@ -141,7 +141,7 @@ Open question: the redistribution terms of `hand_landmarker.task` are not stated
 ## 11. Known limitations and open items
 
 - The manual webcam and real-mouse tests in section 5 have not been run.
-- About 10 FPS on this laptop in evening light; the camera wait and the model take most of the time.
+- About 16-19 FPS on this laptop in evening light without a hand; the model takes most of each frame.
 - Gesture thresholds are uncalibrated starting values.
 - The preview window must have focus for `p`, `q`, and Esc. Ctrl+C and the screen-corner failsafe work without focus.
 - One primary monitor is the supported target. Other platforms, Wayland, and multi-monitor setups are untested.

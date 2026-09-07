@@ -163,7 +163,15 @@ def test_watchdog_releases_button_when_hand_is_gone() -> None:
     cam = world.camera(cfg.camera)
     tracker = world.tracker(cfg.tracker)
     mouse = MouseController(world.backend(), cfg.cursor)
-    app = GestureMouseApp(cfg, cam, tracker, mouse, world.display(""), draw=lambda *a: None)
+    app = GestureMouseApp(
+        cfg,
+        cam,
+        tracker,
+        mouse,
+        world.display(""),
+        draw=lambda *a: None,
+        mirror=lambda frame: frame[:, ::-1],
+    )
     app.run()
     assert ("mouse_down", "left") in world.events
     assert ("mouse_up", "left") in world.events
