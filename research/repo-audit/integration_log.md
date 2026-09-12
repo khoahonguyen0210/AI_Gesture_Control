@@ -32,6 +32,16 @@
 | 2026-10-09 | Mirror with `cv2.flip`; convert colors with `cv2.cvtColor` | Extension E-H2: 0.25 ms instead of about 3 ms per frame. The mirror function is injectable so tests need no OpenCV | NumPy copies | Pass a NumPy mirror |
 | 2026-10-09 | New CLI option `--max-frames N` | Extension E: lets a profiling run stop by itself | Stop with a key | Remove the option |
 | 2026-10-09 | No C++ or Rust code | Extension E-H4: the profile shows no pure-Python bottleneck | Native module | — |
+| 2026-10-09 | Device logic (command handler and watchdog) is in `firmware/src/device.c`, apart from the parser in `protocol.c` | Both are plain C with no hardware calls; the simulator and the tests reuse them | One file | Merge the files |
+| 2026-10-09 | The parser drops one byte after a bad CRC or an oversized length, then searches for the next start byte | A real frame that begins inside a bad one is still found (C test `test_frame_inside_bad_frame_is_found`) | Drop the whole bad frame | Change `fail(..., 1)` to the frame size |
+| 2026-10-09 | Protocol gap: the spec has no NACK reason for a valid-size payload with an invalid value (button above 1, state above 4). The device answers NACK reason 2 (bad length) and runs nothing | Closest existing reason; no new reason without a protocol version change | Add reason 5 in protocol version 2 | Change request to bump `VER` |
+| 2026-10-09 | A frame that is rejected (NACK) does not reset the device watchdog | Only frames that run count as contact | Reset on any CRC-valid frame | Move the reset in `device_handle` |
+| 2026-10-09 | `device_sim` reads text lines (`T <ms>`, `X <hex bytes>`) instead of raw bytes | Simulated time can be injected, and Windows text-mode pipes cannot corrupt the bytes | Raw binary stdin | — |
+| 2026-10-09 | Watchdog time, byte timeout, and heartbeat interval are required arguments with no built-in default | The plan says to choose them from measurement; tests pass 500, 50, and 100 ms as test values only | Guessed defaults | Measure on a real board (Appendix A, not started) |
+| 2026-10-09 | `MouseController.release_all()` also calls the backend's own `release_all()` when it has one | `SerialBackend` must send RELEASE_ALL on every exit path. The recognizer is unchanged | Send RELEASE_ALL only on close | Remove the `getattr` call |
+| 2026-10-09 | `SerialBackend` is not connected to the command line | A1 has no real serial port and no `pyserial`; it is used by tests and the loopback | Add a `--serial` option | Change request with a serial library audit |
+| 2026-10-09 | CI runs `python firmware/build.py --test --sanitize` (gcc with ASan and UBSan on Linux, MSVC with ASan on Windows) | C tests run on every push | Python tests only | Remove the step |
+| 2026-10-09 | Extensions B and C are skipped for now | Their gate (measured weakness of the rules) is not met; no real-hand evaluation exists | Train anyway | Run EVAL-1, then check the gate again |
 | 2026-10-09 | Config errors from the file, the command line, and range checks are reported in one `ConfigError` | Users can fix every problem at once (U-CFG-09) | Stop at the first problem | â€” |
 
 ## Change requests

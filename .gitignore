@@ -43,6 +43,15 @@ pip-wheel-metadata/
 pip-log.txt
 pip-delete-this-directory.txt
 
+# Compiled C output
+*.exe
+*.obj
+*.o
+*.pdb
+*.ilk
+*.lib
+*.exp
+
 # Test, lint, and type-check output
 .pytest_cache/
 .mypy_cache/

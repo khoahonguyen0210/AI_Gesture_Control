@@ -139,3 +139,23 @@ Same machine as run-01 (`output/benchmarks/machine.txt`), 2026-10-09, evening ro
 | achieved FPS | 9.8 | 19.47 | 16.41 |
 
 Tests after the changes: `python -m pytest -q` 149 passed, 2 deselected; `ruff`, `ruff format --check`, `mypy src` pass; the suite also passes with `cv2`, `mediapipe`, and `pyautogui` blocked.
+
+### Extension A0 and A1: serial protocol and C code (laptop only, no hardware)
+
+| Date | Command or procedure | Result |
+|---|---|---|
+| 2026-10-09 | A0: `gcc`, `clang`, `cc`, `cl` on PATH; `vswhere`; WSL | None on PATH. Visual Studio Community 2026 with MSVC 14.51.36231 found. WSL Ubuntu has no compiler. Nothing installed or bought |
+| 2026-10-09 | `python firmware/build.py --test` (MSVC, `/std:c11 /W4 /WX`) | Built `test_protocol` and `device_sim` with no warnings. 1000065 checks, 0 failed |
+| 2026-10-09 | `python firmware/build.py --test --sanitize` (MSVC AddressSanitizer) | 1000065 checks, 0 failed. The binary links `clang_rt.asan`. MSVC has no undefined-behavior sanitizer |
+| 2026-10-09 | Strict clang build with `zig cc` (pip package `ziglang`, in a temporary environment, not a project dependency): `-std=c11 -Wall -Wextra -Wpedantic -Werror -Wconversion` | First try failed: a signed/unsigned conversion in the CRC loop. Fixed with 32-bit arithmetic; second try clean; 1000065 checks, 0 failed |
+| 2026-10-09 | Same clang with `-fsanitize=undefined -fno-sanitize-recover=undefined` | 1000065 checks, 0 failed |
+| 2026-10-09 | `python -m pytest -q tests/test_serial_backend.py tests/test_protocol_loopback.py` | 14 passed. Loopback: every host frame was acknowledged with its own sequence number; a corrupted frame got NACK reason 1 and did not run; a device-to-host type got NACK reason 3; after the host went silent for longer than the watchdog time, the device printed `WATCHDOG release_all` and ended with no button held |
+| 2026-10-09 | CRC check value for ASCII `123456789` | `0x29B1` in both C and Python |
+| 2026-10-09 | `git diff main -- src/gesture_mouse/gesture_recognizer.py` | Empty. The recognizer was not changed |
+| 2026-10-09 | `python -m pytest -q`; `ruff check .`; `ruff format --check .`; `mypy src` | 163 passed, 2 deselected; all pass |
+
+Limits: no microcontroller, no physical serial port, and no real link were used. The watchdog was tested with simulated time only.
+
+### Extensions B and C
+
+Not started. The gate in the Extension Plan (Section 4.1) needs recorded evaluation numbers that show a weakness of the rules. No real-hand evaluation exists yet (EVAL-1 is planned), so the gate is not met. C depends on B.

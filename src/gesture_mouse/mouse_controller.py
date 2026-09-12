@@ -158,3 +158,9 @@ class MouseController:
                 self.backend.mouse_up(button)
             except Exception:
                 log.exception("Could not release the %s mouse button", button)
+        backend_release = getattr(self.backend, "release_all", None)
+        if callable(backend_release):
+            try:
+                backend_release()
+            except Exception:
+                log.exception("Could not send release-all to the mouse backend")
