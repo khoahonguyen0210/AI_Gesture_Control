@@ -137,6 +137,7 @@ Open question: the redistribution terms of `hand_landmarker.task` are not stated
 | Privacy and security | Tested | Search of code and history (test log, Phase 8) | No external audit |
 | Packaging and release | Tested | `python -m build`; wheel tested in a new environment; `release.yml` | Release workflow not run (no tag, not pushed) |
 | C (device-side protocol code) | Tested (laptop only) | `firmware/src/`; C tests under MSVC with ASan and under clang with UBSan | No microcontroller; no RTOS or driver work |
+| C++ | Tested (laptop only) | `firmware/fuzz/`: reference parser, differential test, libFuzzer target; MSVC and Clang builds | Testing role only; not part of the running app |
 | Serial protocol design and safe parsing | Tested (laptop only) | Protocol, parser, `SerialBackend`, 1,000,000-byte random-input test, loopback with `device_sim` | Simulated link; watchdog tested with simulated time only |
 | ML training and evaluation | Not started | Gate not met (no real-hand evaluation yet) | — |
 | Containerized ML workflow | Not started | Depends on ML training | — |
@@ -145,7 +146,7 @@ Open question: the redistribution terms of `hand_landmarker.task` are not stated
 
 ## 11. Known limitations and open items
 
-- Extensions done: D (packaging), E (profiling), A1 (serial protocol and C code, tested on the laptop only). B and C wait for the evaluation gate. Appendix A (real board) is not started because it needs a purchase.
+- Extensions done: D (packaging), E (profiling), A1 (serial protocol and C code, tested on the laptop only), and C++ differential fuzzing (owner request). B and C wait for the evaluation gate. Appendix A (real board) is not started because it needs a purchase.
 
 - The manual webcam and real-mouse tests in section 5 have not been run.
 - About 16-19 FPS on this laptop in evening light without a hand; the model takes most of each frame.

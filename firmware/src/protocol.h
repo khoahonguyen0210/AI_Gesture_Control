@@ -12,6 +12,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define PROTO_SOF 0xA5u
 #define PROTO_VERSION 0x01u
 #define PROTO_HEADER_SIZE 5u
@@ -77,5 +81,9 @@ void proto_parser_push(proto_parser *p, uint8_t byte, uint32_t tick);
 
 /* Call until it returns PROTO_NONE after each push. */
 proto_result proto_parser_poll(proto_parser *p, proto_frame *frame);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -156,6 +156,15 @@ Tests after the changes: `python -m pytest -q` 149 passed, 2 deselected; `ruff`,
 
 Limits: no microcontroller, no physical serial port, and no real link were used. The watchdog was tested with simulated time only.
 
+### C++ differential testing (owner request)
+
+| Date | Command or procedure | Result |
+|---|---|---|
+| 2026-10-10 | `python firmware/build.py --test` (MSVC, C++17, `/W4 /WX`) | `test_protocol`: 1000065 checks, 0 failed. `differential_test`: 202004 streams, 0 mismatches |
+| 2026-10-10 | Planted bug: the C parser dropped a whole frame after a bad CRC instead of one byte; then restored with `git checkout` | `differential_test`: 26448 mismatches; `test_protocol`: 3 failed. After restoring: 0 and 0 |
+| 2026-10-10 | Strict Clang (`zig c++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Wconversion -fsanitize=undefined`) | Builds; 202004 streams, 0 mismatches. Warnings seen came from zig's own C++ library build, not project files |
+| 2026-10-10 | `python firmware/build.py --fuzz 120` (MSVC libFuzzer with AddressSanitizer) | 533065 inputs in 121 s, about 4405 per second, 467 new coverage units, no crash or mismatch; exit code 0 |
+
 ### Extensions B and C
 
 Not started. The gate in the Extension Plan (Section 4.1) needs recorded evaluation numbers that show a weakness of the rules. No real-hand evaluation exists yet (EVAL-1 is planned), so the gate is not met. C depends on B.

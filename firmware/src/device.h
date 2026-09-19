@@ -5,6 +5,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "protocol.h"
 
 #define DEVICE_FW_MAJOR 0u
@@ -49,5 +53,9 @@ void device_release_all(device *d);
 
 /* Returns 1 once per silence longer than the watchdog time, after releasing all outputs. */
 int device_check_watchdog(device *d, uint32_t tick);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

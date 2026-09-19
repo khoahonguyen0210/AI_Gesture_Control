@@ -42,6 +42,9 @@
 | 2026-10-09 | `SerialBackend` is not connected to the command line | A1 has no real serial port and no `pyserial`; it is used by tests and the loopback | Add a `--serial` option | Change request with a serial library audit |
 | 2026-10-09 | CI runs `python firmware/build.py --test --sanitize` (gcc with ASan and UBSan on Linux, MSVC with ASan on Windows) | C tests run on every push | Python tests only | Remove the step |
 | 2026-10-09 | Extensions B and C are skipped for now | Their gate (measured weakness of the rules) is not met; no real-hand evaluation exists | Train anyway | Run EVAL-1, then check the gate again |
+| 2026-10-10 | The C++ reference parser reads a whole buffer, and its CRC uses a lookup table | Written separately from the C code, so the two can disagree when one has a bug | Share code with the C parser | — |
+| 2026-10-10 | `extern "C"` guards in `protocol.h` and `device.h` | Lets C++ include the C headers | — | — |
+| 2026-10-10 | MSVC builds C files separately (`/std:c11`) before the C++ file (`/std:c++17`) | MSVC rejects both standard flags in one command | — | — |
 | 2026-10-09 | Config errors from the file, the command line, and range checks are reported in one `ConfigError` | Users can fix every problem at once (U-CFG-09) | Stop at the first problem | â€” |
 
 ## Change requests
@@ -52,6 +55,7 @@
 | 2026-10-09 | Keep the handbooks out of Git | Owner request (`project-context/` is ignored) | Handbook commit step in Phase 0 |
 | 2026-10-09 | Replace `opencv-python` with `opencv-contrib-python` | See Decisions | `pyproject.toml`, CI |
 | 2026-10-09 | Start the extension plan (D, E, A0, A1; B and C only if their gate is met) before the MVP Definition of Done is fully met | Owner instruction ("just follow it"). This is the owner's written exception to the MVP gate (Extension Plan rule 3). Open MVP items: the manual webcam tests | `extensions/`, `firmware/`, workflows, records |
+| 2026-10-10 | Add C++ to the project: an independent C++17 reference parser, a seeded differential test, and a libFuzzer target under `firmware/fuzz/` | Owner request. Profiling showed no slow stage for C++ to speed up (Extension E-H4), so C++ was given a testing job instead: it checks the C parser against the protocol rules | `firmware/fuzz/`, `firmware/build.py`, CI, README |
 | 2026-10-09 | Add `build` as a development dependency | Extension D. License MIT (`build` 1.6.1, `pyproject_hooks` 1.3.3) | `pyproject.toml` |
 
 ## Integrations

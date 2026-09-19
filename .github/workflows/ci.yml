@@ -27,7 +27,7 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy src
-      - name: C protocol tests (warnings as errors, sanitizers)
+      - name: C and C++ protocol tests (warnings as errors, sanitizers)
         run: python firmware/build.py --test --sanitize
       - name: Tests (no camera or mouse needed)
         run: python -m pytest -q -m "not hardware"

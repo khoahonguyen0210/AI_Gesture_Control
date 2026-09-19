@@ -10,6 +10,7 @@
 ![MediaPipe](https://img.shields.io/badge/MediaPipe-0097A7)
 ![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white)
 ![C](https://img.shields.io/badge/C-A8B9CC?logo=c&logoColor=black)
+![C++](https://img.shields.io/badge/C++-00599C?logo=cplusplus&logoColor=white)
 ![pytest](https://img.shields.io/badge/pytest-0A9EDC?logo=pytest&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -39,6 +40,7 @@ Measured on one laptop (ThinkPad X1 Yoga, Intel i7-1260P, Windows 11, plugged in
 | Automated tests | **163 passed**, no camera or mouse needed |
 | Line coverage | **92%** overall; gesture logic **99 to 100%** |
 | C protocol tests | **1,000,065 checks** passed, with memory and undefined-behavior checkers |
+| C and C++ parsers compared | **202,004** test streams and **533,065** fuzzed inputs, **0** differences |
 | Failed camera reads in the benchmark runs | **0** of 6000 frames |
 
 Profiling found that one Windows camera driver (DirectShow) gave only 9.9 frames per second, while another (Media Foundation) gave 30. Switching drivers made the largest difference. The hand model now takes most of each frame, so rewriting code in C++ or Rust would not help, and it was not done.
@@ -72,22 +74,27 @@ MediaPipe's pretrained hand model finds 21 points on the hand. The gestures them
 
 All numbers are starting values and can be changed in [`config/default.toml`](config/default.toml).
 
-## Serial protocol and C code
+## Serial protocol in C and C++
 
-An optional part of the project sends the same mouse actions to an external device over a serial link. The device side is plain C written so it could run on a microcontroller. It checks every frame with a CRC, recovers after garbage bytes, rejects anything it does not know, and releases all buttons if the laptop goes silent. It was tested on the laptop with a simulated device; no board or real serial port was used.
+An optional part of the project sends the same mouse actions to an external device over a serial link. The device side is plain C written so it could run on a microcontroller. It checks every frame with a CRC, recovers after garbage bytes, rejects anything it does not know, and releases all buttons if the laptop goes silent.
+
+A second parser, written separately in modern C++ from the protocol rules, checks the C parser. Both read the same byte streams, and any difference in the frames they accept or the errors they report counts as a bug. The C++ side also computes the CRC a different way (with a lookup table), so the CRC is checked too. A seeded test runs over 200,000 damaged streams in CI, and libFuzzer searches for new inputs on its own. When a bug was planted in the C parser on purpose, the test found 26,448 mismatching streams.
+
+Everything was tested on the laptop with a simulated device; no board or real serial port was used.
 
 ```bash
 python firmware/build.py --test --sanitize
+python firmware/build.py --fuzz 120
 ```
 
 ## Tech stack
 
 | Area | Tools |
 |---|---|
-| Languages | Python, C |
+| Languages | Python, C, C++ |
 | Computer vision | OpenCV, MediaPipe Hand Landmarker (pretrained), NumPy |
 | Mouse control | PyAutoGUI |
-| Embedded-style code | C11, CRC-16, MSVC, Clang, GCC (in CI), AddressSanitizer, UBSan |
+| Embedded-style code | C11, C++17, CRC-16, MSVC, Clang, GCC (in CI), AddressSanitizer, UBSan, libFuzzer |
 | Packaging | setuptools, build, GitHub releases |
 | CI and quality | GitHub Actions, pytest, Ruff, mypy |
 
@@ -155,7 +162,7 @@ Settings live in [`config/default.toml`](config/default.toml). Copy it, change o
 src/gesture_mouse/   Camera, hand tracker, gesture rules, mouse control, preview, app
 tests/               Automated tests with fake hardware
 scripts/             Model download, camera list, benchmark, recording, evaluation
-firmware/            C protocol code, tests, and the simulated device
+firmware/            C protocol code, C++ reference parser and fuzzer, tests, simulated device
 config/              Default settings
 research/            Reference audit, decisions, test log, handover report
 .github/             CI and release workflows
