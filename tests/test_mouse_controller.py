@@ -8,7 +8,7 @@ import pytest
 
 from gesture_mouse.config import CursorConfig
 from gesture_mouse.errors import InputControlError
-from gesture_mouse.gesture_recognizer import Action, ActionType
+from gesture_mouse.gesture_recognizer import Action, ActionType, GestureState
 from gesture_mouse.mouse_controller import DryRunBackend, MouseController, PyAutoGuiBackend
 
 A = ActionType
@@ -179,3 +179,29 @@ def test_release_all_survives_backend_error() -> None:
     backend.fail_on = "mouse_up"
     mc.release_all()
     assert mc.held_buttons == set()
+
+
+class DeviceBackend(RecordingBackend):
+    def show_state(self, state: GestureState) -> None:
+        self._rec("show_state", state)
+
+    def tick(self) -> None:
+        self._rec("tick")
+
+    def close(self) -> None:
+        self._rec("close")
+
+
+def test_end_frame_and_close_use_optional_backend_hooks() -> None:
+    backend = DeviceBackend()
+    mc = MouseController(backend, CursorConfig())
+    mc.end_frame(GestureState.POINTING)
+    mc.close()
+    assert backend.calls == [("show_state", GestureState.POINTING), ("tick",), ("close",)]
+
+
+def test_end_frame_and_close_skip_missing_hooks() -> None:
+    mc, backend = controller()
+    mc.end_frame(GestureState.IDLE)
+    mc.close()
+    assert backend.calls == []

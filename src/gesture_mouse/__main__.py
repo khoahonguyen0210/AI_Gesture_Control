@@ -5,7 +5,8 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from functools import partial
 from pathlib import Path
 
 from gesture_mouse import __version__
@@ -13,6 +14,8 @@ from gesture_mouse.app import EXIT_CONFIG, run_app
 from gesture_mouse.config import AppConfig, Overrides, load_config
 from gesture_mouse.errors import ConfigError
 from gesture_mouse.logging_setup import configure_logging
+from gesture_mouse.mouse_controller import MouseBackend, PyAutoGuiBackend
+from gesture_mouse.serial_backend import open_serial_backend
 
 log = logging.getLogger("gesture_mouse")
 
@@ -34,6 +37,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--max-frames", type=int, help="stop after this many frames (for profiling and tests)"
+    )
+    parser.add_argument(
+        "--serial",
+        metavar="PORT",
+        help="send actions to a serial device instead of the real mouse, "
+        "for example rfc2217://localhost:4000 (Wokwi) or COM5",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
@@ -64,7 +73,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.max_frames is not None and args.max_frames <= 0:
         print("--max-frames must be greater than 0", file=sys.stderr)
         return EXIT_CONFIG
-    return run_app(cfg, dry_run=args.dry_run, max_frames=args.max_frames)
+    if args.serial and args.dry_run:
+        print("--serial and --dry-run cannot be used together", file=sys.stderr)
+        return EXIT_CONFIG
+    backend: Callable[[], MouseBackend] = PyAutoGuiBackend
+    if args.serial:
+        backend = partial(open_serial_backend, args.serial)
+    return run_app(cfg, dry_run=args.dry_run, backend_factory=backend, max_frames=args.max_frames)
 
 
 if __name__ == "__main__":

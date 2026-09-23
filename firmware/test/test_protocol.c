@@ -292,6 +292,35 @@ static void test_moves_and_scroll(void)
     CHECK(d.x == 10 && d.y == -3 && d.scroll == -2);
 }
 
+static void test_hello_starts_a_new_session(void)
+{
+    device d;
+    device_event ev;
+    proto_frame move = {PROTO_VERSION, PROTO_MOVE, 1, 4, {0x0A, 0x00, 0xFD, 0xFF}};
+    proto_frame down = {PROTO_VERSION, PROTO_BUTTON, 2, 2, {0, 1}};
+    proto_frame hello = {PROTO_VERSION, PROTO_HELLO, 3, 1, {PROTO_VERSION}};
+    uint8_t out[PROTO_MAX_FRAME];
+    device_init(&d, 500, 0);
+    device_handle(&d, &move, 1, &ev, out, sizeof(out));
+    device_handle(&d, &down, 2, &ev, out, sizeof(out));
+    device_handle(&d, &hello, 3, &ev, out, sizeof(out));
+    CHECK(ev == DEVICE_HELLO && d.buttons == 0 && d.x == 0 && d.y == 0 && d.scroll == 0);
+}
+
+static void test_state_range(void)
+{
+    device d;
+    device_event ev;
+    proto_frame f = {PROTO_VERSION, PROTO_STATE, 1, 1, {DEVICE_STATE_PAUSED}};
+    uint8_t out[PROTO_MAX_FRAME];
+    device_init(&d, 500, 0);
+    device_handle(&d, &f, 1, &ev, out, sizeof(out));
+    CHECK(ev == DEVICE_STATE && d.state == DEVICE_STATE_PAUSED && out[2] == PROTO_ACK);
+    f.payload[0] = DEVICE_STATE_COUNT;
+    device_handle(&d, &f, 2, &ev, out, sizeof(out));
+    CHECK(ev == DEVICE_REJECTED && out[2] == PROTO_NACK && d.state == DEVICE_STATE_PAUSED);
+}
+
 int main(void)
 {
     test_crc_check_value();
@@ -310,6 +339,8 @@ int main(void)
     test_device_hello();
     test_watchdog();
     test_moves_and_scroll();
+    test_hello_starts_a_new_session();
+    test_state_range();
     printf("%d checks, %d failed\n", checks, failures);
     return failures == 0 ? 0 : 1;
 }

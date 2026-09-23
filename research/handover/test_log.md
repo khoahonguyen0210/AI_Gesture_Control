@@ -165,6 +165,22 @@ Limits: no microcontroller, no physical serial port, and no real link were used.
 | 2026-10-10 | Strict Clang (`zig c++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Wconversion -fsanitize=undefined`) | Builds; 202004 streams, 0 mismatches. Warnings seen came from zig's own C++ library build, not project files |
 | 2026-10-10 | `python firmware/build.py --fuzz 120` (MSVC libFuzzer with AddressSanitizer) | 533065 inputs in 121 s, about 4405 per second, 467 new coverage units, no crash or mismatch; exit code 0 |
 
+### Wokwi demo (owner request)
+
+| Date | Command or procedure | Result |
+|---|---|---|
+| 2026-10-10 | Owner activated the free Wokwi for VS Code license | Extension `wokwi.wokwi-vscode` installed |
+| 2026-10-10 | PlatformIO 6.2.0 installed with pip in `research/envs/platformio` (ignored by Git) | Downloaded the Espressif 32 platform 6.9.0, Arduino-ESP32 2.0.17, and the Adafruit SSD1306, GFX, and BusIO libraries |
+| 2026-10-10 | First builds | `symlink://../src` failed (no library manifest); `build_src_filter` with `../src` failed (source folder clash). Fixed with a pre-build script that calls `env.BuildSources` on `firmware/src` |
+| 2026-10-10 | `pio run -d firmware/wokwi` (`-Wall -Wextra`) | Success, 0 warnings. RAM 6.8% (22,152 of 327,680 bytes), flash 23.1% (302,389 of 1,310,720 bytes) |
+| 2026-10-10 | `python firmware/build.py --test --sanitize` | 1000068 checks, 0 failed (adds HELLO reset and STATE range checks); 202004 streams, 0 mismatches |
+| 2026-10-10 | `python -m pytest -q` | 176 passed, 2 deselected. New tests use a fake serial device for the handshake, button ACKs, NACKs, timeouts, state frames, and port closing |
+| 2026-10-10 | `python -m gesture_mouse --serial rfc2217://localhost:4000` with no simulator running | Clear error ("actively refused"), exit code 6; the camera was not opened and the real mouse was not used |
+| 2026-10-10 | `python scripts/check_all.py --all` | 8 of 8 checks passed, including the camera tests and the firmware build |
+| — | Run in the Wokwi simulator with the gesture app connected | Not run by the agent. It needs the VS Code simulator window; see the owner checks in the README Testing section |
+
+Limits: the ESP32 runs only in the simulator. No real board or physical serial port was used.
+
 ### Extensions B and C
 
 Not started. The gate in the Extension Plan (Section 4.1) needs recorded evaluation numbers that show a weakness of the rules. No real-hand evaluation exists yet (EVAL-1 is planned), so the gate is not met. C depends on B.

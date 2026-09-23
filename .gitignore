@@ -52,6 +52,11 @@ pip-delete-this-directory.txt
 *.lib
 *.exp
 
+# PlatformIO and Wokwi output
+.pio/
+*.ino.cpp
+*.vcd
+
 # Test, lint, and type-check output
 .pytest_cache/
 .mypy_cache/

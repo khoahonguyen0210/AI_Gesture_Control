@@ -1,6 +1,6 @@
 # Handover Report
 
-Date: 2026-10-09. Every claim here points to an entry in `test_log.md` or to a file in `research/repo-audit/`. Anything that was not run is marked "Not run".
+Date: 2026-10-09, updated 2026-10-10. Every claim here points to an entry in `test_log.md` or to a file in `research/repo-audit/`. Anything that was not run is marked "Not run".
 
 ## 1. Summary
 
@@ -14,7 +14,9 @@ Gesture Mouse is a local Python desktop app that lets one hand in front of a lap
 | OS | Windows 11 Pro 10.0.26200, display scaled to 150% |
 | Python | 3.12.10, 64-bit |
 | Runtime packages | mediapipe 1.1.0, opencv-contrib-python 5.0.0.93, numpy 2.5.3, pyautogui 0.9.54 |
-| Dev packages | pytest 9.1.1, pytest-cov 7.1.0, ruff 0.17.0, mypy 2.4.0 |
+| Dev packages | pytest 9.1.1, pytest-cov 7.1.0, ruff 0.17.0, mypy 2.4.0, build 1.6.1, pyserial 3.5 |
+| Optional packages | pyserial 3.5 (`.[serial]`, for `--serial`) |
+| Firmware tools | PlatformIO 6.2.0 in its own environment; Wokwi for VS Code |
 | Exact versions | `requirements.lock.txt` |
 
 ## 3. How to install, launch, and test
@@ -33,7 +35,7 @@ python -m gesture_mouse --dry-run
 python -m gesture_mouse
 ```
 
-`python -m pytest -q -m hardware` runs the two tests that use the real camera and model.
+`python -m pytest -q -m hardware` runs the two tests that use the real camera and model. `python scripts/check_all.py --all` runs every automated check, the camera tests, and the firmware build, then prints a summary.
 
 ## 4. Acceptance criteria
 
@@ -47,12 +49,12 @@ python -m gesture_mouse
 | AC-06 | Brief and held pinch are told apart; no repeated clicks | Partly met | U-GR-04 to U-GR-08 pass; M-06, M-07 not run |
 | AC-07 | No unintended action with no hand, an uncertain gesture, no camera, or a failed start | Partly met | U-GR-01, U-GR-07, U-GR-15, I-ERR-01 to 08, M-03 pass; M-11 to M-14 not run |
 | AC-08 | Pause, resume, and exit work | Partly met | I-APP-04, I-APP-06 pass; M-15 to M-17 not run |
-| AC-09 | Unit tests cover mapping, classification, state changes, click debouncing | Met | 145 tests; geometry 100%, recognizer 99%, mouse controller 94% line coverage |
+| AC-09 | Unit tests cover mapping, classification, state changes, click debouncing | Met | 176 tests; geometry 100%, recognizer 99%, mouse controller 94% line coverage |
 | AC-10 | Handover documents setup, launch, tests, limits, and results | Met | This report |
 
 ## 5. Test results
 
-Last full run: see the Phase 8 clean-environment entry in `test_log.md` (145 passed, 2 hardware tests deselected, 0 failed). The hardware tests passed separately (2 passed).
+Last full run: see the Wokwi demo entries in `test_log.md` (176 passed, 2 hardware tests deselected, 0 failed). `check_all.py --all` passed 8 of 8 checks, including the 2 hardware tests and the firmware build.
 
 **Manual tests run by the agent:** M-01, M-02 (camera opens, releases, reopens), M-03 (wrong camera index gives a clear error and exit code 3), M-24 partly (dry run with the real camera, model, and window; no hand shown).
 
@@ -78,6 +80,10 @@ Last full run: see the Phase 8 clean-environment entry in `test_log.md` (145 pas
 | M-20 | Rename `models/hand_landmarker.task`, start, then rename it back | Model error with the fetch command; exit code 4 |
 | M-21 | Start with a config that has `pinch_off = 0.1` and an unknown key | Both errors listed; exit code 2 |
 | BENCH-2 | `python scripts/benchmark.py --note "hand moving"` while moving through the gestures | JSON in `output/benchmarks/` |
+| W-01 | Start the Wokwi simulator (`firmware/wokwi/wokwi.toml`) and wait 5 s | `DEMO` on the screen; the `bad` and `wd` counts rise during the demo |
+| W-02 | `python -m gesture_mouse --serial rfc2217://localhost:4000`, try every gesture | `LIVE`; the OLED and LEDs react as in the README table |
+| W-03 | Press `p` during a drag, then `q` | `PAUSED` and the green LED off; after quitting, the demo starts again 5 s later |
+| W-04 | Stop the simulator, run the W-02 command | Clear error; exit code 6 |
 | EVAL-1 | Record labeled sessions with `python scripts/record_landmarks.py`, then run `scripts/evaluate_gestures.py` | Tables in `output/evaluation/` |
 
 ## 6. Performance results
@@ -114,7 +120,10 @@ Not collected. It needs labeled recordings of a real hand (EVAL-1). The scripts 
 | opencv-contrib-python | 5.0.0.93 | Apache-2.0 |
 | numpy | 2.5.3 | BSD-3-Clause and others |
 | pyautogui | 0.9.54 | BSD |
+| pyserial (optional) | 3.5 | BSD-3-Clause |
 | pytest, pytest-cov, ruff, mypy | see section 2 | MIT |
+
+The Wokwi demo's build tools and libraries are listed in `research/repo-audit/license_and_dependency_audit.md`. None are copied into the repository.
 
 Open question: the redistribution terms of `hand_landmarker.task` are not stated in the guides that were read. The model is downloaded at setup and never committed.
 
@@ -129,7 +138,7 @@ Open question: the redistribution terms of `hand_landmarker.task` are not stated
 | Camera integration | Tested | Fake-capture tests; M-01 to M-03 | Built-in webcam through OpenCV only |
 | Operating-system input | Tested (fakes only) | Mouse controller tests; DPI check | Real mouse not driven yet (M-05 to M-09) |
 | State management and safety | Tested | State-machine, watchdog, shutdown, failsafe tests | No formal safety analysis |
-| Unit and integration testing | Tested | 145 tests | Hardware behavior only in manual tests |
+| Unit and integration testing | Tested | 176 tests | Hardware behavior only in manual tests |
 | Debugging and resource management | Tested | Shutdown-order tests; repeated camera open | No long soak test |
 | Performance measurement and engineering | Tested | `metrics.py`, `benchmark.py`, runs 01-03, cProfile, three tested hypotheses | One machine; no hand in view |
 | Dependency and license management | Tested | `pip check`, audit files, lock file | Not legal advice; model terms unverified |
@@ -138,15 +147,16 @@ Open question: the redistribution terms of `hand_landmarker.task` are not stated
 | Packaging and release | Tested | `python -m build`; wheel tested in a new environment; `release.yml` | Release workflow not run (no tag, not pushed) |
 | C (device-side protocol code) | Tested (laptop only) | `firmware/src/`; C tests under MSVC with ASan and under clang with UBSan | No microcontroller; no RTOS or driver work |
 | C++ | Tested (laptop only) | `firmware/fuzz/`: reference parser, differential test, libFuzzer target; MSVC and Clang builds | Testing role only; not part of the running app |
-| Serial protocol design and safe parsing | Tested (laptop only) | Protocol, parser, `SerialBackend`, 1,000,000-byte random-input test, loopback with `device_sim` | Simulated link; watchdog tested with simulated time only |
+| Serial protocol design and safe parsing | Tested (laptop only) | Protocol, parser, `SerialBackend`, 1,000,000-byte random-input test, loopback with `device_sim`; `--serial` with pyserial (COM ports and RFC 2217) and a fake-device test suite | Simulated link; watchdog tested with simulated time only |
+| Embedded simulation (ESP32) | Implemented | `firmware/wokwi/`: Arduino sketch, OLED and LEDs, demo mode; builds with 0 warnings locally and in CI | Simulator only; the run with the app connected is an owner check (W-01 to W-04) |
 | ML training and evaluation | Not started | Gate not met (no real-hand evaluation yet) | — |
 | Containerized ML workflow | Not started | Depends on ML training | — |
 | Terraform and cloud | Not applicable | Omitted by decision | — |
-| Firmware and electronics | Not applicable | Out of scope | — |
+| Firmware and electronics | Partly (simulated) | The Wokwi ESP32 sketch runs the project's C code | No real board, circuit, or USB HID |
 
 ## 11. Known limitations and open items
 
-- Extensions done: D (packaging), E (profiling), A1 (serial protocol and C code, tested on the laptop only), and C++ differential fuzzing (owner request). B and C wait for the evaluation gate. Appendix A (real board) is not started because it needs a purchase.
+- Extensions done: D (packaging), E (profiling), A1 (serial protocol and C code, tested on the laptop only), C++ differential fuzzing (owner request), and a Wokwi ESP32 demo with the `--serial` option (owner request, simulator only). B and C wait for the evaluation gate. Appendix A (real board) is not started because it needs a purchase.
 
 - The manual webcam and real-mouse tests in section 5 have not been run.
 - About 16-19 FPS on this laptop in evening light without a hand; the model takes most of each frame.

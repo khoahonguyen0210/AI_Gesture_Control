@@ -1,0 +1,7 @@
+# Wokwi for VS Code. Build the firmware first: pio run -d firmware/wokwi
+[wokwi]
+version = 1
+firmware = ".pio/build/esp32/firmware.bin"
+elf = ".pio/build/esp32/firmware.elf"
+# The gesture app connects here: python -m gesture_mouse --serial rfc2217://localhost:4000
+rfc2217ServerPort = 4000

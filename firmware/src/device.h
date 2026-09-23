@@ -16,6 +16,19 @@ extern "C" {
 #define DEVICE_BUTTON_LEFT 0x01u
 #define DEVICE_BUTTON_RIGHT 0x02u
 
+/* STATE payload: the host's gesture state, for the device to show. */
+enum device_state {
+    DEVICE_STATE_IDLE = 0,
+    DEVICE_STATE_POINTING = 1,
+    DEVICE_STATE_PINCH = 2,
+    DEVICE_STATE_DRAGGING = 3,
+    DEVICE_STATE_RIGHT_CLICK = 4,
+    DEVICE_STATE_SCROLLING = 5,
+    DEVICE_STATE_NO_HAND = 6,
+    DEVICE_STATE_PAUSED = 7,
+    DEVICE_STATE_COUNT = 8
+};
+
 typedef enum {
     DEVICE_REJECTED = 0,
     DEVICE_HELLO,
@@ -43,6 +56,7 @@ void device_init(device *d, uint32_t watchdog_ticks, uint32_t tick);
 /*
  * Runs one valid frame and writes the reply (ACK, HELLO_ACK, or NACK) to out.
  * Returns the reply size. *event says what happened; DEVICE_REJECTED means nothing ran.
+ * HELLO starts a new session, so it also clears buttons, state, position, and scroll.
  */
 size_t device_handle(device *d, const proto_frame *f, uint32_t tick, device_event *event,
                      uint8_t *out, size_t out_size);

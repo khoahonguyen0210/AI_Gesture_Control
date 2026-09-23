@@ -42,6 +42,10 @@ size_t device_handle(device *d, const proto_frame *f, uint32_t tick, device_even
         if (p[0] != PROTO_VERSION) {
             return device_nack(f->seq, PROTO_BAD_VERSION, out, out_size);
         }
+        device_release_all(d);
+        d->x = 0;
+        d->y = 0;
+        d->scroll = 0;
         *event = DEVICE_HELLO;
         break;
     case PROTO_MOVE:
@@ -63,7 +67,7 @@ size_t device_handle(device *d, const proto_frame *f, uint32_t tick, device_even
         *event = DEVICE_SCROLL;
         break;
     case PROTO_STATE:
-        if (p[0] > 4) {
+        if (p[0] >= DEVICE_STATE_COUNT) {
             return device_nack(f->seq, PROTO_BAD_LENGTH, out, out_size);
         }
         d->state = p[0];

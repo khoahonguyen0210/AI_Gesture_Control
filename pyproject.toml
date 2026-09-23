@@ -18,7 +18,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.17.0", "mypy>=2.4.0", "build>=1.6.1"]
+serial = ["pyserial>=3.5"]
+dev = [
+  "pytest>=9.1.1",
+  "pytest-cov>=7.1.0",
+  "ruff>=0.17.0",
+  "mypy>=2.4.0",
+  "build>=1.6.1",
+  "pyserial>=3.5",
+]
 
 [project.scripts]
 gesture-mouse = "gesture_mouse.__main__:main"
@@ -46,5 +54,5 @@ warn_unused_ignores = true
 disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["cv2.*", "mediapipe.*", "pyautogui.*"]
+module = ["cv2.*", "mediapipe.*", "pyautogui.*", "serial.*"]
 ignore_missing_imports = true

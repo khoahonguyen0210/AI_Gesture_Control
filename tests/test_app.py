@@ -163,7 +163,7 @@ def test_start_paused_sends_nothing() -> None:
 def test_importing_the_app_loads_no_hardware_library() -> None:
     code = (
         "import sys, gesture_mouse.app, gesture_mouse.__main__;"
-        "print([m for m in ('cv2','mediapipe','pyautogui') if m in sys.modules])"
+        "print([m for m in ('cv2','mediapipe','pyautogui','serial') if m in sys.modules])"
     )
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "[]"
@@ -178,3 +178,8 @@ def test_max_frames_stops_the_loop() -> None:
 def test_max_frames_must_be_positive(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["--max-frames", "0"]) == 2
     assert "--max-frames" in capsys.readouterr().err
+
+
+def test_serial_and_dry_run_cannot_be_combined(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["--serial", "COM99", "--dry-run"]) == 2
+    assert "--serial and --dry-run" in capsys.readouterr().err

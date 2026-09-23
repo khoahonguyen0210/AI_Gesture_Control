@@ -39,13 +39,20 @@
 | 2026-10-09 | `device_sim` reads text lines (`T <ms>`, `X <hex bytes>`) instead of raw bytes | Simulated time can be injected, and Windows text-mode pipes cannot corrupt the bytes | Raw binary stdin | — |
 | 2026-10-09 | Watchdog time, byte timeout, and heartbeat interval are required arguments with no built-in default | The plan says to choose them from measurement; tests pass 500, 50, and 100 ms as test values only | Guessed defaults | Measure on a real board (Appendix A, not started) |
 | 2026-10-09 | `MouseController.release_all()` also calls the backend's own `release_all()` when it has one | `SerialBackend` must send RELEASE_ALL on every exit path. The recognizer is unchanged | Send RELEASE_ALL only on close | Remove the `getattr` call |
-| 2026-10-09 | `SerialBackend` is not connected to the command line | A1 has no real serial port and no `pyserial`; it is used by tests and the loopback | Add a `--serial` option | Change request with a serial library audit |
+| 2026-10-09 | (Replaced on 2026-10-10 by `--serial`) `SerialBackend` is not connected to the command line | A1 has no real serial port and no `pyserial`; it is used by tests and the loopback | Add a `--serial` option | Change request with a serial library audit |
 | 2026-10-09 | CI runs `python firmware/build.py --test --sanitize` (gcc with ASan and UBSan on Linux, MSVC with ASan on Windows) | C tests run on every push | Python tests only | Remove the step |
 | 2026-10-09 | Extensions B and C are skipped for now | Their gate (measured weakness of the rules) is not met; no real-hand evaluation exists | Train anyway | Run EVAL-1, then check the gate again |
 | 2026-10-10 | The C++ reference parser reads a whole buffer, and its CRC uses a lookup table | Written separately from the C code, so the two can disagree when one has a bug | Share code with the C parser | — |
 | 2026-10-10 | `extern "C"` guards in `protocol.h` and `device.h` | Lets C++ include the C headers | — | — |
 | 2026-10-10 | MSVC builds C files separately (`/std:c11`) before the C++ file (`/std:c++17`) | MSVC rejects both standard flags in one command | — | — |
 | 2026-10-09 | Config errors from the file, the command line, and range checks are reported in one `ConfigError` | Users can fix every problem at once (U-CFG-09) | Stop at the first problem | â€” |
+| 2026-10-10 | `--serial PORT` connects `SerialBackend` to the command line through pyserial, an optional extra (`.[serial]`) | Owner request (Wokwi demo). pyserial opens both COM ports and `rfc2217://` URLs. It is imported only when `--serial` is used | Raw sockets for Wokwi only | Remove the option and the extra |
+| 2026-10-10 | `SerialLink` reads replies before each write and waits only for HELLO_ACK (2 s) and button ACKs (500 ms) | Keeps the reply buffer small without a reader thread | A background reader thread | Return to write-only |
+| 2026-10-10 | STATE values 0 to 7 have names (`enum device_state`), one per recognizer state; the device rejects 8 and above | The old range (0 to 4) had no meaning and could not hold all eight states | Fold the states into five values | Restore the old range check |
+| 2026-10-10 | HELLO clears buttons, state, position, and scroll on the device | The host starts its cursor at the screen center on each run, so the device must start from zero too | Reset in the sketch only | Remove the reset |
+| 2026-10-10 | `MouseController.end_frame()` and `close()` call the backend's `show_state`, `tick`, and `close` when it has them | Same pattern as `release_all`; other backends need no change | Add the methods to every backend | Remove the calls |
+| 2026-10-10 | The Wokwi demo runs in its own parser and device, apart from the live session | Switching between the demo and the app never changes the app's cursor | One shared session | Merge the sessions |
+| 2026-10-10 | PlatformIO builds `firmware/src` through a pre-build script (`env.BuildSources`) | Both simpler options failed (see the test log); the shared C files stay in one place | Copy the C files into the sketch folder | Copy the files |
 
 ## Change requests
 
@@ -57,6 +64,7 @@
 | 2026-10-09 | Start the extension plan (D, E, A0, A1; B and C only if their gate is met) before the MVP Definition of Done is fully met | Owner instruction ("just follow it"). This is the owner's written exception to the MVP gate (Extension Plan rule 3). Open MVP items: the manual webcam tests | `extensions/`, `firmware/`, workflows, records |
 | 2026-10-10 | Add C++ to the project: an independent C++17 reference parser, a seeded differential test, and a libFuzzer target under `firmware/fuzz/` | Owner request. Profiling showed no slow stage for C++ to speed up (Extension E-H4), so C++ was given a testing job instead: it checks the C parser against the protocol rules | `firmware/fuzz/`, `firmware/build.py`, CI, README |
 | 2026-10-09 | Add `build` as a development dependency | Extension D. License MIT (`build` 1.6.1, `pyproject_hooks` 1.3.3) | `pyproject.toml` |
+| 2026-10-10 | Add a Wokwi ESP32 demo and the `--serial` option | Owner request. The owner uses a free Wokwi account and license, which the Extension Plan's "no account" rule did not foresee. Nothing is bought, and the app itself stays local | `firmware/wokwi/`, `serial_backend.py`, `__main__.py`, CI, README |
 
 ## Integrations
 

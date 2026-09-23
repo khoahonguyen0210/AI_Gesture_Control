@@ -148,6 +148,7 @@ class GestureMouseApp:
             for action in out.actions:
                 self.mouse.apply(action)
             self._watchdog(obs)
+            self.mouse.end_frame(out.state)
         fps = self.fps.tick(self.clock())
         with m.time("draw"):
             self.draw(
@@ -266,9 +267,10 @@ def shutdown(
     camera: CameraLike | None,
     display: Display | None,
 ) -> None:
-    """Release the mouse first, then the tracker, camera, and window. One failure skips nothing."""
+    """Close the mouse first, then the tracker, camera, and window. One failure skips nothing."""
     steps: list[tuple[str, Callable[[], None] | None]] = [
         ("release mouse buttons", mouse.release_all if mouse else None),
+        ("close mouse backend", mouse.close if mouse else None),
         ("close tracker", tracker.close if tracker else None),
         ("release camera", camera.release if camera else None),
         ("close window", display.close if display else None),

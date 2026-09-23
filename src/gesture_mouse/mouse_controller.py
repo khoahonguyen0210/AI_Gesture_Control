@@ -9,7 +9,7 @@ from typing import Any, Protocol
 from gesture_mouse.config import CursorConfig
 from gesture_mouse.errors import InputControlError
 from gesture_mouse.geometry import apply_dead_zone
-from gesture_mouse.gesture_recognizer import Action, ActionType
+from gesture_mouse.gesture_recognizer import Action, ActionType, GestureState
 
 log = logging.getLogger(__name__)
 
@@ -164,3 +164,17 @@ class MouseController:
                 backend_release()
             except Exception:
                 log.exception("Could not send release-all to the mouse backend")
+
+    def end_frame(self, state: GestureState) -> None:
+        """Once per frame. A backend that supports it shows the state and sends keep-alives."""
+        show_state = getattr(self.backend, "show_state", None)
+        if callable(show_state):
+            show_state(state)
+        tick = getattr(self.backend, "tick", None)
+        if callable(tick):
+            tick()
+
+    def close(self) -> None:
+        backend_close = getattr(self.backend, "close", None)
+        if callable(backend_close):
+            backend_close()

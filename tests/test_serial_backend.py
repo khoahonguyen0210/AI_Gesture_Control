@@ -1,21 +1,27 @@
 from __future__ import annotations
 
 import struct
+import sys
 
 import pytest
 
 from gesture_mouse.config import CursorConfig
 from gesture_mouse.errors import InputControlError
-from gesture_mouse.gesture_recognizer import Action, ActionType
+from gesture_mouse.gesture_recognizer import Action, ActionType, GestureState
 from gesture_mouse.mouse_controller import MouseController
 from gesture_mouse.serial_backend import (
+    ACK_TIMEOUT_MS,
+    HELLO_TIMEOUT_MS,
     AckReader,
     Frame,
     MsgType,
     SerialBackend,
+    connect,
     crc16,
     decode,
     encode,
+    open_serial_backend,
+    scan,
 )
 
 A = ActionType
@@ -171,3 +177,122 @@ def test_large_moves_are_clamped_to_int16() -> None:
     assert (dx, dy) == (32767, -32768)
     b.move_to(*b._pos)
     assert len(stream.frames()) == 1
+
+
+def test_show_state_sends_only_changes() -> None:
+    b, stream, _ = backend()
+    b.show_state(GestureState.POINTING)
+    b.show_state(GestureState.POINTING)
+    b.show_state(GestureState.DRAGGING)
+    assert [(f.type, f.payload) for f in stream.frames()] == [
+        (MsgType.STATE, b"\x01"),
+        (MsgType.STATE, b"\x03"),
+    ]
+
+
+def test_state_is_sent_again_after_release_all() -> None:
+    b, stream, _ = backend()
+    b.show_state(GestureState.PAUSED)
+    b.release_all()
+    b.show_state(GestureState.PAUSED)
+    assert kinds(stream.frames()) == [MsgType.STATE, MsgType.RELEASE_ALL, MsgType.STATE]
+
+
+def test_scan_keeps_the_start_of_a_frame() -> None:
+    whole = encode(MsgType.HEARTBEAT, 1)
+    move = encode(MsgType.MOVE, 2, b"\x01\x00\x02\x00")
+    frames, rest = scan(b"\x00" + whole + move[:6])
+    assert [f.seq for f in frames] == [1]
+    assert rest == move[:6]
+    assert [f.seq for f in scan(rest + move[6:])[0]] == [2]
+
+
+class FakePort:
+    """A device on the other end of a serial port. It answers every frame it receives."""
+
+    def __init__(self, reply: str = "ack") -> None:
+        self.reply = reply
+        self.sent = bytearray()
+        self.incoming = bytearray()
+        self.closed = False
+
+    @property
+    def in_waiting(self) -> int:
+        return len(self.incoming)
+
+    def read(self, n: int) -> bytes:
+        data, self.incoming = bytes(self.incoming[:n]), self.incoming[n:]
+        return data
+
+    def write(self, data: bytes) -> int:
+        self.sent += data
+        for f in decode(data):
+            if self.reply == "silent":
+                continue
+            if f.type == MsgType.HELLO:
+                self.incoming += encode(MsgType.HELLO_ACK, f.seq, b"\x01\x00\x01")
+            elif self.reply == "nack" and f.type == MsgType.BUTTON:
+                self.incoming += encode(MsgType.NACK, f.seq, bytes([f.seq, 2]))
+            else:
+                self.incoming += encode(MsgType.ACK, f.seq, bytes([f.seq]))
+        return len(data)
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class StepClock(Clock):
+    def sleep(self, seconds: float) -> None:
+        self.t += 1
+
+
+def test_connect_says_hello_and_waits_for_button_acks() -> None:
+    port = FakePort()
+    b = connect(port, "fake")
+    mc = MouseController(b, CursorConfig())
+    mc.apply(Action(A.DRAG_START, 0.5, 0.5))
+    mc.apply(Action(A.DRAG_END))
+    assert kinds(decode(bytes(port.sent))) == [MsgType.HELLO, MsgType.BUTTON, MsgType.BUTTON]
+
+
+def test_replies_are_read_before_each_write() -> None:
+    port = FakePort()
+    b = connect(port, "fake")
+    for i in range(50):
+        b.move_to(i, i)
+    assert port.in_waiting == len(encode(MsgType.ACK, 0, b"\x00"))
+
+
+def test_connect_without_a_device_fails_and_closes_the_port() -> None:
+    port, clock = FakePort(reply="silent"), StepClock()
+    with pytest.raises(InputControlError, match="no reply from a device on fake"):
+        connect(port, "fake", clock_ms=clock, sleep=clock.sleep)
+    assert port.closed
+    assert clock.t == HELLO_TIMEOUT_MS
+
+
+def test_nack_for_button_down_releases_everything() -> None:
+    port, clock = FakePort(reply="nack"), StepClock()
+    b = connect(port, "fake", clock_ms=clock, sleep=clock.sleep)
+    with pytest.raises(InputControlError, match="no ACK for left"):
+        b.mouse_down("left")
+    assert kinds(decode(bytes(port.sent)))[-1] == MsgType.RELEASE_ALL
+    assert clock.t < ACK_TIMEOUT_MS
+
+
+def test_close_closes_the_port() -> None:
+    port = FakePort()
+    connect(port, "fake").close()
+    assert port.closed
+
+
+def test_missing_pyserial_has_an_install_hint(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sys.modules, "serial", None)
+    with pytest.raises(InputControlError, match=r"pip install -e \"\.\[serial\]\""):
+        open_serial_backend("COM99")
+
+
+def test_bad_port_is_an_input_control_error() -> None:
+    pytest.importorskip("serial")
+    with pytest.raises(InputControlError, match="could not open serial port"):
+        open_serial_backend("nosuchscheme://x")

@@ -16,12 +16,32 @@ Resolved on 2026-10-09 with Python 3.12.10 on Windows 11. `pip check` reported "
 | mypy | 2.4.0 | MIT | Type checks (dev) |
 | build | 1.6.1 | MIT | Builds the sdist and wheel (dev, Extension D) |
 | pyproject_hooks | 1.3.3 | MIT | Needed by `build` |
+| pyserial | 3.5 | BSD-3-Clause | Serial ports and `rfc2217://` for `--serial` (optional extra `serial`, and dev) |
 
 Notes:
 
 - mediapipe 1.1.0 requires `opencv-contrib-python`, `matplotlib`, `sounddevice`, `absl-py`, `flatbuffers`, and `certifi`. The project does not import the last four itself.
 - mediapipe 1.1.0 exposes only `Image`, `ImageFormat`, and `tasks` at the top level. The legacy `mediapipe.solutions` API is not present, which matches the plan to use the Tasks API.
 - numpy 2.5.3 requires Python 3.12 or newer, so the project requires Python 3.12 or 3.13.
+
+## Wokwi demo tools and libraries
+
+Added on 2026-10-10. None of these are copied into the repository. PlatformIO downloads them when the firmware is built, and the firmware binary is not committed.
+
+| Item | Version | License | Role |
+|---|---|---|---|
+| PlatformIO Core | 6.2.0 | Apache-2.0 | Builds the firmware (installed in its own environment, not a project dependency) |
+| Espressif 32 platform | 6.9.0 | Apache-2.0 | PlatformIO board support |
+| Arduino-ESP32 | 2.0.17 | LGPL-2.1-or-later | Arduino core for the ESP32 |
+| Adafruit SSD1306 | 2.5.17 | BSD | OLED driver |
+| Adafruit GFX Library | 1.12.6 | BSD | Text and shapes on the OLED |
+| Adafruit BusIO | 1.17.4 | MIT | Needed by the Adafruit libraries |
+| Wokwi for VS Code | Owner's install | Free license for open-source projects; commercial use needs a paid plan | Runs the simulated ESP32 |
+
+Notes:
+
+- Arduino-ESP32 is LGPL. The firmware is built only for the simulator and is not shipped, so no binary is distributed.
+- The Wokwi license needs a free Wokwi account and lasts 30 days. The app sends the simulator only mouse action frames, over localhost.
 
 ## Hand landmark model
 
