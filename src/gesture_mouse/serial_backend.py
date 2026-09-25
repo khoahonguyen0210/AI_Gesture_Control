@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import struct
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import IntEnum
@@ -61,7 +62,7 @@ STATE_CODES = {
 BAUD = 115200
 HEARTBEAT_MS = 100
 HELLO_TIMEOUT_MS = 2000
-ACK_TIMEOUT_MS = 500
+ACK_TIMEOUT_MS = 2000  # a real board answers in a few ms; the Wokwi simulator can take a second
 
 
 @dataclass(frozen=True)
@@ -117,13 +118,14 @@ class ByteStream(Protocol):
     def write(self, data: bytes, /) -> object: ...
 
 
-AckReader = Callable[[int], bool]
+ReplyReader = Callable[[], list[Frame]]
 
 
 class SerialBackend:
     """Sends mouse actions as protocol frames. Moves are sent as relative steps.
 
-    Call tick() regularly; it sends a heartbeat when nothing else was sent for heartbeat_ms.
+    Call tick() once per frame. It checks that each button press got an ACK within
+    ack_timeout_ms, without waiting, and sends a heartbeat when the link has been quiet.
     """
 
     def __init__(
@@ -132,13 +134,16 @@ class SerialBackend:
         heartbeat_ms: int,
         clock_ms: Callable[[], int],
         size: tuple[int, int] = (1920, 1080),
-        ack_reader: AckReader | None = None,
+        replies: ReplyReader | None = None,
+        ack_timeout_ms: int = ACK_TIMEOUT_MS,
     ) -> None:
         self.stream = stream
         self.heartbeat_ms = heartbeat_ms
         self.clock_ms = clock_ms
         self._size = size
-        self.ack_reader = ack_reader
+        self.replies = replies
+        self.ack_timeout_ms = ack_timeout_ms
+        self._waiting: dict[int, tuple[str, int]] = {}  # seq: (button, deadline)
         self._seq = 0
         self._last_send_ms: int | None = None
         self._pos = (size[0] // 2, size[1] // 2)
@@ -158,6 +163,7 @@ class SerialBackend:
         return self._send(MsgType.HELLO, bytes([VERSION]))
 
     def tick(self) -> None:
+        self._check_acks()
         last = self._last_send_ms
         if last is None or self.clock_ms() - last >= self.heartbeat_ms:
             self._send(MsgType.HEARTBEAT)
@@ -174,9 +180,29 @@ class SerialBackend:
 
     def _button(self, button: str, down: bool) -> None:
         seq = self._send(MsgType.BUTTON, bytes([BUTTONS[button], int(down)]))
-        if down and self.ack_reader is not None and not self.ack_reader(seq):
-            self.release_all()
-            raise InputControlError(f"no ACK for {button} button down (seq {seq})")
+        if down and self.replies is not None:
+            self._waiting[seq] = (button, self.clock_ms() + self.ack_timeout_ms)
+
+    def _check_acks(self) -> None:
+        if self.replies is None:
+            return
+        for f in self.replies():
+            if f.seq in self._waiting and f.type in (MsgType.ACK, MsgType.NACK):
+                button, _ = self._waiting.pop(f.seq)
+                if f.type == MsgType.NACK:
+                    self._fail(f"device rejected {button} button down (seq {f.seq})")
+        now = self.clock_ms()
+        for seq, (button, deadline) in self._waiting.items():
+            if now >= deadline:
+                self._fail(f"no ACK for {button} button down (seq {seq})")
+
+    def _fail(self, problem: str) -> None:
+        self._waiting.clear()
+        self.release_all()
+        raise InputControlError(
+            f"{problem}. Is the device still running? "
+            "In Wokwi, keep the simulator tab visible and not covered by another window"
+        )
 
     def click(self, button: str) -> None:
         self._button(button, True)
@@ -212,7 +238,7 @@ class SerialBackend:
 
 
 class SerialLink:
-    """A serial port that also reads replies. Each write reads first, so the buffer stays small."""
+    """A serial port that keeps the device's replies. Each write reads first."""
 
     def __init__(
         self,
@@ -224,27 +250,37 @@ class SerialLink:
         self.clock_ms = clock_ms
         self.sleep = sleep
         self._rest = b""
+        self._inbox: deque[Frame] = deque(maxlen=256)
 
-    def _read(self) -> list[Frame]:
+    def _read(self) -> None:
         waiting = self.port.in_waiting
         if not waiting:
-            return []
+            return
         frames, self._rest = scan(self._rest + self.port.read(waiting))
         for f in frames:
             if f.type == MsgType.NACK and len(f.payload) == 2:
                 log.warning("Device rejected frame %d (reason %d)", f.payload[0], f.payload[1])
-        return frames
+        self._inbox.extend(frames)
 
     def write(self, data: bytes) -> int:
         self._read()
         return int(self.port.write(data))
 
+    def replies(self) -> list[Frame]:
+        """Replies received since the last call."""
+        self._read()
+        frames = list(self._inbox)
+        self._inbox.clear()
+        return frames
+
     def wait_reply(self, seq: int, timeout_ms: int) -> Frame | None:
         """The device's reply to frame seq (ACK, NACK, or HELLO_ACK), or None after the timeout."""
         deadline = self.clock_ms() + timeout_ms
         while True:
-            for f in self._read():
+            self._read()
+            for f in self._inbox:
                 if f.seq == seq and f.type in (MsgType.ACK, MsgType.NACK, MsgType.HELLO_ACK):
+                    self._inbox.remove(f)
                     return f
             if self.clock_ms() >= deadline:
                 return None
@@ -263,12 +299,7 @@ def connect(
 ) -> SerialBackend:
     """Wraps an open port, checks that a device answers HELLO, and returns the backend."""
     link = SerialLink(port, clock_ms, **link_args)
-
-    def ack_reader(seq: int) -> bool:
-        reply = link.wait_reply(seq, ACK_TIMEOUT_MS)
-        return reply is not None and reply.type == MsgType.ACK
-
-    backend = SerialBackend(link, HEARTBEAT_MS, clock_ms, ack_reader=ack_reader)
+    backend = SerialBackend(link, HEARTBEAT_MS, clock_ms, replies=link.replies)
     try:
         reply = link.wait_reply(backend.hello(), HELLO_TIMEOUT_MS)
     except OSError as exc:

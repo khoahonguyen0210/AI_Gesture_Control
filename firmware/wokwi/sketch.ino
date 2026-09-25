@@ -16,7 +16,7 @@
 #define DEMO_AFTER_MS 5000u
 #define FLASH_MS 200u  /* a click stays visible this long */
 #define LINK_MS 300u   /* the link LED stays on this long after a valid frame */
-#define REDRAW_MS 40u
+#define REDRAW_MS 100u
 #define HOST_W 1920    /* SerialBackend's default screen size */
 #define HOST_H 1080
 
@@ -36,6 +36,20 @@ typedef struct {
     uint32_t last_frame_ms;
     uint32_t press_ms[2];
 } session;
+
+/* What the OLED shows, copied from the loop to the display task. */
+typedef struct {
+    const char *mode;
+    uint8_t state;
+    uint32_t frames_ok;
+    uint32_t frames_bad;
+    uint32_t watchdog_releases;
+    int32_t x;
+    int32_t y;
+    int32_t scroll;
+    bool left;
+    bool right;
+} view;
 
 typedef struct {
     uint16_t wait_ms;
@@ -85,7 +99,8 @@ static uint32_t last_host_byte_ms;
 static size_t demo_index;
 static uint32_t demo_next_ms;
 static uint8_t demo_seq;
-static uint32_t last_draw_ms;
+static view shown;
+static portMUX_TYPE shown_lock = portMUX_INITIALIZER_UNLOCKED;
 
 static void session_init(session *s, uint32_t now)
 {
@@ -177,28 +192,25 @@ static int clamp(int v, int lo, int hi)
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
-static void draw(const session *s, const char *mode, uint32_t now)
+static void draw(const view *v)
 {
     /* Cursor area: 85x48 pixels for a 1920x1080 screen; device x and y count from its center. */
     const int bx = 0, by = 16, bw = 85, bh = 48;
-    int cx = clamp(bx + bw / 2 + (int)(s->dev.x * bw / HOST_W), bx + 2, bx + bw - 3);
-    int cy = clamp(by + bh / 2 + (int)(s->dev.y * bh / HOST_H), by + 2, by + bh - 3);
-    bool left = lit(s, 0, DEVICE_BUTTON_LEFT, now);
-    bool right = lit(s, 1, DEVICE_BUTTON_RIGHT, now);
-    uint8_t state = s->dev.state < DEVICE_STATE_COUNT ? s->dev.state : 0;
+    int cx = clamp(bx + bw / 2 + (int)(v->x * bw / HOST_W), bx + 2, bx + bw - 3);
+    int cy = clamp(by + bh / 2 + (int)(v->y * bh / HOST_H), by + 2, by + bh - 3);
 
     oled.clearDisplay();
     oled.setTextColor(SSD1306_WHITE);
     oled.setCursor(0, 0);
-    oled.print(mode);
+    oled.print(v->mode);
     oled.print(' ');
-    oled.print(STATE_NAMES[state]);
+    oled.print(STATE_NAMES[v->state < DEVICE_STATE_COUNT ? v->state : 0]);
     oled.setCursor(0, 8);
-    oled.printf("ok%lu bad%lu wd%lu", (unsigned long)s->frames_ok, (unsigned long)s->frames_bad,
-                (unsigned long)s->watchdog_releases);
+    oled.printf("ok%lu bad%lu wd%lu", (unsigned long)v->frames_ok, (unsigned long)v->frames_bad,
+                (unsigned long)v->watchdog_releases);
 
     oled.drawRect(bx, by, bw, bh, SSD1306_WHITE);
-    if (left) {
+    if (v->left) {
         oled.fillCircle(cx, cy, 3, SSD1306_WHITE);
     } else {
         oled.drawCircle(cx, cy, 3, SSD1306_WHITE);
@@ -206,25 +218,58 @@ static void draw(const session *s, const char *mode, uint32_t now)
 
     oled.drawRect(90, 16, 17, 14, SSD1306_WHITE);
     oled.drawRect(110, 16, 17, 14, SSD1306_WHITE);
-    if (left) {
+    if (v->left) {
         oled.fillRect(90, 16, 17, 14, SSD1306_WHITE);
     }
-    if (right) {
+    if (v->right) {
         oled.fillRect(110, 16, 17, 14, SSD1306_WHITE);
     }
-    oled.setTextColor(left ? SSD1306_BLACK : SSD1306_WHITE);
+    oled.setTextColor(v->left ? SSD1306_BLACK : SSD1306_WHITE);
     oled.setCursor(96, 20);
     oled.print('L');
-    oled.setTextColor(right ? SSD1306_BLACK : SSD1306_WHITE);
+    oled.setTextColor(v->right ? SSD1306_BLACK : SSD1306_WHITE);
     oled.setCursor(116, 20);
     oled.print('R');
     oled.setTextColor(SSD1306_WHITE);
     oled.setCursor(90, 36);
-    oled.printf("S%+ld", (long)s->dev.scroll);
+    oled.printf("S%+ld", (long)v->scroll);
     oled.display();
+}
 
-    digitalWrite(PIN_LED_LEFT, left ? HIGH : LOW);
-    digitalWrite(PIN_LED_RIGHT, right ? HIGH : LOW);
+/* Runs on the other core, so a slow OLED never delays replies to the host. */
+static void display_task(void *arg)
+{
+    (void)arg;
+    for (;;) {
+        portENTER_CRITICAL(&shown_lock);
+        view v = shown;
+        portEXIT_CRITICAL(&shown_lock);
+        draw(&v);
+        vTaskDelay(pdMS_TO_TICKS(REDRAW_MS));
+    }
+}
+
+static void publish(const session *s, const char *mode, uint32_t now)
+{
+    view v = {mode,
+              s->dev.state,
+              s->frames_ok,
+              s->frames_bad,
+              s->watchdog_releases,
+              s->dev.x,
+              s->dev.y,
+              s->dev.scroll,
+              lit(s, 0, DEVICE_BUTTON_LEFT, now),
+              lit(s, 1, DEVICE_BUTTON_RIGHT, now)};
+    portENTER_CRITICAL(&shown_lock);
+    shown = v;
+    portEXIT_CRITICAL(&shown_lock);
+}
+
+static void show_leds(const session *s, uint32_t now)
+{
+    digitalWrite(PIN_LED_LEFT, lit(s, 0, DEVICE_BUTTON_LEFT, now) ? HIGH : LOW);
+    digitalWrite(PIN_LED_RIGHT, lit(s, 1, DEVICE_BUTTON_RIGHT, now) ? HIGH : LOW);
     digitalWrite(PIN_LED_LINK, s->last_frame_ms != 0 && now - s->last_frame_ms < LINK_MS);
 }
 
@@ -242,6 +287,8 @@ void setup()
     session_init(&host, now);
     session_init(&demo, now);
     last_host_byte_ms = now;
+    publish(&host, "WAIT", now);
+    xTaskCreatePinnedToCore(display_task, "display", 4096, NULL, 1, NULL, 0);
 }
 
 void loop()
@@ -263,12 +310,7 @@ void loop()
         demo_next_ms = now;
     }
 
-    if (now - last_draw_ms >= REDRAW_MS) {
-        last_draw_ms = now;
-        if (demo_mode) {
-            draw(&demo, "DEMO", now);
-        } else {
-            draw(&host, host.frames_ok != 0 ? "LIVE" : "WAIT", now);
-        }
-    }
+    const session *active = demo_mode ? &demo : &host;
+    show_leds(active, now);
+    publish(active, demo_mode ? "DEMO" : (host.frames_ok != 0 ? "LIVE" : "WAIT"), now);
 }

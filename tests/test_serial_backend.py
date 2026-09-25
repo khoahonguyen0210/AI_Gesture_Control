@@ -12,9 +12,9 @@ from gesture_mouse.mouse_controller import MouseController
 from gesture_mouse.serial_backend import (
     ACK_TIMEOUT_MS,
     HELLO_TIMEOUT_MS,
-    AckReader,
     Frame,
     MsgType,
+    ReplyReader,
     SerialBackend,
     connect,
     crc16,
@@ -50,9 +50,9 @@ class Clock:
         return self.t
 
 
-def backend(ack_reader: AckReader | None = None) -> tuple[SerialBackend, FakeStream, Clock]:
+def backend(replies: ReplyReader | None = None) -> tuple[SerialBackend, FakeStream, Clock]:
     stream, clock = FakeStream(), Clock()
-    b = SerialBackend(stream, 100, clock, size=(1000, 800), ack_reader=ack_reader)
+    b = SerialBackend(stream, 100, clock, size=(1000, 800), replies=replies)
     return b, stream, clock
 
 
@@ -135,24 +135,34 @@ def test_heartbeat_only_when_idle() -> None:
     assert kinds(stream.frames()) == [MsgType.HEARTBEAT, MsgType.SCROLL, MsgType.HEARTBEAT]
 
 
-def test_missing_ack_for_button_down_releases_everything() -> None:
-    asked: list[int] = []
-
-    def no_ack(seq: int) -> bool:
-        asked.append(seq)
-        return False
-
-    b, stream, _ = backend(ack_reader=no_ack)
-    with pytest.raises(InputControlError, match="no ACK"):
-        b.mouse_down("left")
-    assert asked == [0]
-    assert kinds(stream.frames()) == [MsgType.BUTTON, MsgType.RELEASE_ALL]
+def test_missing_ack_releases_everything_after_the_timeout() -> None:
+    b, stream, clock = backend(replies=lambda: [])
+    b.mouse_down("left")
+    clock.t = ACK_TIMEOUT_MS - 1
+    b.tick()
+    clock.t = ACK_TIMEOUT_MS
+    with pytest.raises(InputControlError, match="no ACK for left button down"):
+        b.tick()
+    assert kinds(stream.frames()) == [MsgType.BUTTON, MsgType.HEARTBEAT, MsgType.RELEASE_ALL]
 
 
-def test_ack_received_continues() -> None:
-    b, stream, _ = backend(ack_reader=lambda seq: True)
+def test_a_late_ack_is_accepted_without_waiting() -> None:
+    inbox: list[Frame] = []
+
+    def replies() -> list[Frame]:
+        frames = inbox[:]
+        inbox.clear()
+        return frames
+
+    b, stream, clock = backend(replies=replies)
     b.click("right")
-    assert len(stream.frames()) == 2
+    clock.t = ACK_TIMEOUT_MS - 1
+    b.tick()
+    inbox.append(Frame(MsgType.ACK, 0, b"\x00"))
+    clock.t = ACK_TIMEOUT_MS * 2
+    b.tick()
+    assert kinds(stream.frames())[:2] == [MsgType.BUTTON, MsgType.BUTTON]
+    assert MsgType.RELEASE_ALL not in kinds(stream.frames())
 
 
 def test_write_error_becomes_input_control_error() -> None:
@@ -246,13 +256,16 @@ class StepClock(Clock):
         self.t += 1
 
 
-def test_connect_says_hello_and_waits_for_button_acks() -> None:
-    port = FakePort()
-    b = connect(port, "fake")
+def test_connect_says_hello_and_checks_button_acks() -> None:
+    port, clock = FakePort(), StepClock()
+    b = connect(port, "fake", clock_ms=clock, sleep=clock.sleep)
     mc = MouseController(b, CursorConfig())
     mc.apply(Action(A.DRAG_START, 0.5, 0.5))
     mc.apply(Action(A.DRAG_END))
-    assert kinds(decode(bytes(port.sent))) == [MsgType.HELLO, MsgType.BUTTON, MsgType.BUTTON]
+    clock.t += ACK_TIMEOUT_MS * 2
+    b.tick()
+    sent = kinds(decode(bytes(port.sent)))
+    assert sent == [MsgType.HELLO, MsgType.BUTTON, MsgType.BUTTON, MsgType.HEARTBEAT]
 
 
 def test_replies_are_read_before_each_write() -> None:
@@ -274,8 +287,9 @@ def test_connect_without_a_device_fails_and_closes_the_port() -> None:
 def test_nack_for_button_down_releases_everything() -> None:
     port, clock = FakePort(reply="nack"), StepClock()
     b = connect(port, "fake", clock_ms=clock, sleep=clock.sleep)
-    with pytest.raises(InputControlError, match="no ACK for left"):
-        b.mouse_down("left")
+    b.mouse_down("left")
+    with pytest.raises(InputControlError, match="device rejected left button down"):
+        b.tick()
     assert kinds(decode(bytes(port.sent)))[-1] == MsgType.RELEASE_ALL
     assert clock.t < ACK_TIMEOUT_MS
 

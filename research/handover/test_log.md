@@ -177,7 +177,13 @@ Limits: no microcontroller, no physical serial port, and no real link were used.
 | 2026-10-10 | `python -m pytest -q` | 176 passed, 2 deselected. New tests use a fake serial device for the handshake, button ACKs, NACKs, timeouts, state frames, and port closing |
 | 2026-10-10 | `python -m gesture_mouse --serial rfc2217://localhost:4000` with no simulator running | Clear error ("actively refused"), exit code 6; the camera was not opened and the real mouse was not used |
 | 2026-10-10 | `python scripts/check_all.py --all` | 8 of 8 checks passed, including the camera tests and the firmware build |
-| — | Run in the Wokwi simulator with the gesture app connected | Not run by the agent. It needs the VS Code simulator window; see the owner checks in the README Testing section |
+| 2026-10-10 | Owner run 1: `python -m gesture_mouse --serial rfc2217://localhost:4000` | Connected and ran for about 3 minutes, then stopped: "no ACK for left button down (seq 212)". No NACK was logged |
+| 2026-10-10 | Checked whether the lost ACK held a `0xFF` byte (Telnet escape in RFC 2217) | No: the ACK for seq 212 is `a5 01 30 d4 01 d4 28 96`. Only the ACKs for seq 47, 215, and 255 contain `0xFF` |
+| 2026-10-10 | New `scripts/serial_check.py`, run against the simulator | 4 of 5 answered; median 367 ms, max 860 ms. A later run of 25: all answered, 234 to 1625 ms, faster while the tab was visible. With the tab hidden: no HELLO_ACK at all |
+| 2026-10-10 | Owner run 2 (500 ms blocking wait) | Stopped after 30 s: "no ACK for right button down (seq 192)" |
+| 2026-10-10 | Cause | The simulator slows down or pauses when its tab is hidden or covered, and the app blocked on each button ACK for at most 500 ms. pyserial already sets `TCP_NODELAY` |
+| 2026-10-10 | Fixes: ACKs are checked once per frame without waiting (2 s limit, then RELEASE_ALL and stop); the OLED is drawn in its own FreeRTOS task on core 0 every 100 ms, so serial replies never wait for the screen | 177 passed, 2 deselected; firmware builds with 0 warnings (RAM 6.8%, flash 23.1%) |
+| 2026-10-10 | Owner run 3 with the fixes, simulator restarted with the new firmware | The owner reported that the app connects and every gesture shows on the board. No reply-time numbers were recorded |
 
 Limits: the ESP32 runs only in the simulator. No real board or physical serial port was used.
 

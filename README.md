@@ -43,12 +43,13 @@ Measured on one laptop (ThinkPad X1 Yoga, Intel i7-1260P, Windows 11, plugged in
 
 | Other measures | Result |
 |---|---|
-| Automated tests | **176 passed**, no camera or mouse needed |
+| Automated tests | **177 passed**, no camera or mouse needed |
 | Line coverage | **92%** overall; gesture logic **99 to 100%** |
 | C protocol tests | **1,000,068 checks** passed, with memory and undefined-behavior checkers |
 | C and C++ parsers compared | **202,004** test streams and **533,065** fuzzed inputs, **0** differences |
 | Failed camera reads in the benchmark runs | **0** of 6000 frames |
 | ESP32 firmware for Wokwi | Builds with **0** warnings; uses **6.8%** of RAM and **23.1%** of flash |
+| Gesture app connected to the Wokwi board | Every gesture shows on the board (checked by hand) |
 
 Profiling found that one Windows camera driver (DirectShow) gave only 9.9 frames per second, while another (Media Foundation) gave 30. Switching drivers made the largest difference. The hand model now takes most of each frame, so rewriting code in C++ or Rust would not help, and it was not done.
 
@@ -109,21 +110,32 @@ python firmware/build.py --fuzz 120
 
 If no app is connected for 5 seconds, the board plays a built-in demo. The demo also sends garbage bytes, a frame with a broken CRC, and a held button followed by silence, so you can see the device reject bad input and release the button on its own.
 
-To connect the gesture app, you need [Wokwi for VS Code](https://docs.wokwi.com/vscode/getting-started) with its free license for open-source projects, and PlatformIO to build the firmware:
+To connect the gesture app, you need [Wokwi for VS Code](https://docs.wokwi.com/vscode/getting-started) with its free license for open-source projects, and PlatformIO to build the firmware. Install PlatformIO in its own environment, so its packages do not mix with the app's:
 
 ```powershell
-python -m pip install platformio
-pio run -d firmware/wokwi
+py -3.12 -m venv research/envs/platformio
+research\envs\platformio\Scripts\python -m pip install platformio
+research\envs\platformio\Scripts\pio run -d firmware/wokwi
 python -m pip install -e ".[serial]"
 ```
 
-Then in VS Code, press F1, choose "Wokwi: Select Config File" and pick `firmware/wokwi/wokwi.toml`, and start the simulator. Keep its tab visible, or the simulation pauses. Then run:
+Then in VS Code, press F1, choose "Wokwi: Select Config File" and pick `firmware/wokwi/wokwi.toml`, and start the simulator. Then run:
 
 ```powershell
 python -m gesture_mouse --serial rfc2217://localhost:4000
 ```
 
 The app sends HELLO first and stops with a clear message if the board does not answer. With `--serial`, the real mouse is never moved. The same option also takes a real port, such as `--serial COM5`.
+
+The simulator pauses or slows down when its tab is hidden, including when another window covers it. Put the camera window and the Wokwi tab side by side, or move the Wokwi tab to its own window (right-click the tab, then "Move into New Window"). The app does not wait for replies, so a slow simulator does not freeze it. If a button press gets no ACK within 2 seconds, the app releases every button and stops, as the protocol requires.
+
+To measure how fast the board answers:
+
+```powershell
+python scripts/serial_check.py rfc2217://localhost:4000
+```
+
+It sends 300 heartbeats and prints the reply time and any frames that got no ACK.
 
 To run only the demo in the browser, make a new ESP32 project on [wokwi.com](https://wokwi.com) and add `sketch.ino`, `diagram.json`, and `libraries.txt` from `firmware/wokwi/`, plus `protocol.h`, `protocol.c`, `device.h`, and `device.c` from `firmware/src/`.
 
@@ -195,6 +207,7 @@ The Wokwi simulator needs a person, so check it by hand after starting it as sho
 | Connect | Run `python -m gesture_mouse --serial rfc2217://localhost:4000` | `LIVE` on the screen; the app log shows `Device on ... answered` |
 | Gestures | Try each gesture in the table at the top | The OLED and LEDs react as listed |
 | Pause | Press `p` during a drag | `PAUSED` on the screen; the green LED turns off |
+| Reply time | Run `python scripts/serial_check.py rfc2217://localhost:4000` with the tab visible | 300 of 300 frames answered |
 | No device | Stop the simulator, then run the same command | The app stops with an error and exit code 6 |
 
 To measure speed and accuracy on your own machine:
@@ -222,7 +235,7 @@ Settings live in [`config/default.toml`](config/default.toml). Copy it, change o
 ```text
 src/gesture_mouse/   Camera, hand tracker, gesture rules, mouse control, preview, app
 tests/               Automated tests with fake hardware
-scripts/             Model download, camera list, benchmark, recording, evaluation, all checks
+scripts/             Model download, camera list, benchmark, recording, evaluation, checks
 firmware/            C protocol code, C++ reference parser and fuzzer, tests, Wokwi ESP32 demo
 config/              Default settings
 research/            Reference audit, decisions, test log, handover report

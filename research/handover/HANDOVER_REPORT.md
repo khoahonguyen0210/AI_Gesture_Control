@@ -58,6 +58,8 @@ Last full run: see the Wokwi demo entries in `test_log.md` (176 passed, 2 hardwa
 
 **Manual tests run by the agent:** M-01, M-02 (camera opens, releases, reopens), M-03 (wrong camera index gives a clear error and exit code 3), M-24 partly (dry run with the real camera, model, and window; no hand shown).
 
+**Wokwi checks run by the owner:** W-01 to W-04 (2026-10-10). The owner reported that the app connects and every gesture shows on the board.
+
 **Owner checklist.** These need a person at the laptop. Start each one with the preview window in focus, and keep the trackpad within reach. Moving the cursor into any screen corner stops the app.
 
 | ID | Do this | Expect |
@@ -84,6 +86,7 @@ Last full run: see the Wokwi demo entries in `test_log.md` (176 passed, 2 hardwa
 | W-02 | `python -m gesture_mouse --serial rfc2217://localhost:4000`, try every gesture | `LIVE`; the OLED and LEDs react as in the README table |
 | W-03 | Press `p` during a drag, then `q` | `PAUSED` and the green LED off; after quitting, the demo starts again 5 s later |
 | W-04 | Stop the simulator, run the W-02 command | Clear error; exit code 6 |
+| W-05 | `python scripts/serial_check.py rfc2217://localhost:4000` with the tab visible | 300 of 300 frames answered; note the reply times |
 | EVAL-1 | Record labeled sessions with `python scripts/record_landmarks.py`, then run `scripts/evaluate_gestures.py` | Tables in `output/evaluation/` |
 
 ## 6. Performance results
@@ -148,7 +151,7 @@ Open question: the redistribution terms of `hand_landmarker.task` are not stated
 | C (device-side protocol code) | Tested (laptop only) | `firmware/src/`; C tests under MSVC with ASan and under clang with UBSan | No microcontroller; no RTOS or driver work |
 | C++ | Tested (laptop only) | `firmware/fuzz/`: reference parser, differential test, libFuzzer target; MSVC and Clang builds | Testing role only; not part of the running app |
 | Serial protocol design and safe parsing | Tested (laptop only) | Protocol, parser, `SerialBackend`, 1,000,000-byte random-input test, loopback with `device_sim`; `--serial` with pyserial (COM ports and RFC 2217) and a fake-device test suite | Simulated link; watchdog tested with simulated time only |
-| Embedded simulation (ESP32) | Implemented | `firmware/wokwi/`: Arduino sketch, OLED and LEDs, demo mode; builds with 0 warnings locally and in CI | Simulator only; the run with the app connected is an owner check (W-01 to W-04) |
+| Embedded simulation (ESP32) | Implemented | `firmware/wokwi/`: Arduino sketch, OLED and LEDs, demo mode; builds with 0 warnings locally and in CI | Simulator only; the run with the app connected is an owner check (W-01 to W-05) |
 | ML training and evaluation | Not started | Gate not met (no real-hand evaluation yet) | — |
 | Containerized ML workflow | Not started | Depends on ML training | — |
 | Terraform and cloud | Not applicable | Omitted by decision | — |
