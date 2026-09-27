@@ -238,7 +238,7 @@ tests/               Automated tests with fake hardware
 scripts/             Model download, camera list, benchmark, recording, evaluation, checks
 firmware/            C protocol code, C++ reference parser and fuzzer, tests, Wokwi ESP32 demo
 config/              Default settings
-research/            Reference audit, decisions, test log, handover report
+research/            Reference audit, dependency licenses, exact versions, decisions, test log, handover
 .github/             CI and release workflows
 ```
 
@@ -268,4 +268,4 @@ This is a personal project, built end to end by one person. Issues and suggestio
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE). Third-party notices are in [`THIRD_PARTY_NOTICES.txt`](THIRD_PARTY_NOTICES.txt).
+MIT. See [`LICENSE`](LICENSE). No third-party code is copied into this repository. The licenses of all dependencies are listed in [`research/repo-audit/license_and_dependency_audit.md`](research/repo-audit/license_and_dependency_audit.md).

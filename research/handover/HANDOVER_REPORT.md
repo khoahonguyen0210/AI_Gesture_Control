@@ -17,7 +17,7 @@ Gesture Mouse is a local Python desktop app that lets one hand in front of a lap
 | Dev packages | pytest 9.1.1, pytest-cov 7.1.0, ruff 0.17.0, mypy 2.4.0, build 1.6.1, pyserial 3.5 |
 | Optional packages | pyserial 3.5 (`.[serial]`, for `--serial`) |
 | Firmware tools | PlatformIO 6.2.0 in its own environment; Wokwi for VS Code |
-| Exact versions | `requirements.lock.txt` |
+| Exact versions | `research/repo-audit/requirements.lock.txt` |
 
 ## 3. How to install, launch, and test
 
@@ -113,7 +113,7 @@ Not collected. It needs labeled recordings of a real hand (EVAL-1). The scripts 
 - **kinivi/hand-gesture-recognition-mediapipe** (`0e737bb8`, Apache-2.0): inspected; install failed on Python 3.12 ("No matching distribution found for mediapipe==0.8.1"). Decision: Reference Only; its models and data are rejected. Nothing copied.
 - **Rounak7721/Virtual-Mouse** (`495b2933`, MIT): inspected; installed in its own environment; not run, because it turns off the PyAutoGUI failsafe. Decision: Reference Only; its gesture set, disabled failsafe, `xrandr` code, and second input library are rejected. Nothing copied.
 
-`THIRD_PARTY_NOTICES.txt` says "None at this time."
+Nothing is copied, so the repository needs no third-party notice file.
 
 ## 9. Dependencies and licenses
 

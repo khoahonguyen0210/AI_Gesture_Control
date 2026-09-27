@@ -24,7 +24,7 @@
 | 2026-10-09 | CI workflow has read-only `contents` permission and no secrets | Least privilege | Default permissions | Remove the `permissions` block |
 | 2026-10-09 | Version lives only in `pyproject.toml`; `__version__` reads the installed package metadata | Extension D: one place for the version | Keep two copies | Restore the literal in `__init__.py` |
 | 2026-10-09 | Build backend requires `setuptools>=77` | `license = "MIT"` (an SPDX expression) and `license-files` need setuptools 77 or newer | Old `License ::` classifiers | Lower the bound and switch to classifiers |
-| 2026-10-09 | `MANIFEST.in` adds test helpers, `config/default.toml`, scripts, and the lock file to the sdist | Without them, the tests inside the sdist fail | Leave the sdist without tests | Delete `MANIFEST.in` |
+| 2026-10-09 | (Replaced on 2026-10-10: `MANIFEST.in` removed) `MANIFEST.in` adds test helpers, `config/default.toml`, scripts, and the lock file to the sdist | Without them, the tests inside the sdist fail | Leave the sdist without tests | Delete `MANIFEST.in` |
 | 2026-10-09 | Release workflow uses `gh release create` with the built-in `github.token`; it checks that the tag matches the package version | No stored secrets and no third-party release action | A marketplace release action | Edit `release.yml` |
 | 2026-10-09 | Camera backend `auto` is OpenCV's default again (MSMF on Windows) | Extension E: DirectShow opens faster but delivers only 9.9 frames/s on this camera; MSMF delivers 30.1. Frame rate matters more than start time | DirectShow | Set `camera.backend = "dshow"` |
 | 2026-10-09 | Camera properties are set only when the driver reports a different value | Each `set` took seconds on MSMF (9.1 s in the profile); open time fell to about 3-4 s | Always set | Remove the check in `Camera.open` |
@@ -55,6 +55,8 @@
 | 2026-10-10 | `MouseController.end_frame()` and `close()` call the backend's `show_state`, `tick`, and `close` when it has them | Same pattern as `release_all`; other backends need no change | Add the methods to every backend | Remove the calls |
 | 2026-10-10 | The Wokwi demo runs in its own parser and device, apart from the live session | Switching between the demo and the app never changes the app's cursor | One shared session | Merge the sessions |
 | 2026-10-10 | PlatformIO builds `firmware/src` through a pre-build script (`env.BuildSources`) | Both simpler options failed (see the test log); the shared C files stay in one place | Copy the C files into the sketch folder | Copy the files |
+| 2026-10-10 | On Windows, `firmware/build.py` uses MSVC before gcc or clang | The GitHub Windows runner has MinGW gcc on its PATH, which has no sanitizer libraries, so the CI build failed with `cannot find -lasan`. MSVC has AddressSanitizer, so Windows keeps its memory checks | Skip sanitizers on Windows | Restore the old search order |
+| 2026-10-10 | Remove `MANIFEST.in` and `THIRD_PARTY_NOTICES.txt`; move the lock file to `research/repo-audit/` | Owner request: a tidier repository root. The release workflow tests the wheel against the repository's own tests, so the sdist does not need them. Nothing is copied, so the notice file only said "None" | Keep the files | Restore them from Git history |
 
 ## Change requests
 

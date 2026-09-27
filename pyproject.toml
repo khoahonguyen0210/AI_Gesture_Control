@@ -7,7 +7,7 @@ name = "gesture-mouse"
 version = "0.1.0"
 description = "Real-time webcam hand-gesture mouse control. Local processing only."
 license = "MIT"
-license-files = ["LICENSE", "THIRD_PARTY_NOTICES.txt"]
+license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [

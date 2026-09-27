@@ -16,6 +16,6 @@ Labels: Reuse, Adapt, Reference Only, Reimplement Independently, Reject. Commits
 | `xrandr` multi-monitor code (Virtual-Mouse `src/main.py` lines 24-30) | Reject | Read the code; uses `subprocess` | MIT | None | None | Linux only; runs an external program | Multi-monitor is not in the MVP; the project forbids `subprocess` in the app |
 | Two input libraries, `pyautogui` + `pynput` (Virtual-Mouse) | Reject | Read the imports | MIT | None | None | Extra dependency | One input library is enough |
 
-**Result:** no component is copied or adapted. `THIRD_PARTY_NOTICES.txt` stays at "None at this time."
+**Result:** no component is copied or adapted. No third-party notice file is needed.
 
 **Phase 4 gate:** the dossier's hand-landmarker approach (Tasks API, VIDEO mode, `detect_for_video`, one hand) is confirmed. mediapipe 1.1.0 has no `mediapipe.solutions`, so the legacy API used by kinivi and Virtual-Mouse is not even available in the project environment.

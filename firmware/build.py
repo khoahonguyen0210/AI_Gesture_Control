@@ -2,7 +2,7 @@
 
 Run: python firmware/build.py --test [--sanitize]
      python firmware/build.py --fuzz 120
-Uses gcc/g++ or clang/clang++ when found, otherwise MSVC from Visual Studio. Warnings are errors.
+On Windows, uses MSVC first (MinGW has no sanitizers); elsewhere gcc or clang. Warnings are errors.
 """
 
 from __future__ import annotations
@@ -60,16 +60,21 @@ def msvc_env() -> dict[str, str] | None:
     return env if "INCLUDE" in env else None
 
 
+def find_msvc() -> Compiler | None:
+    env = msvc_env()
+    cl = shutil.which("cl", path=env.get("PATH") or env.get("Path")) if env else None
+    return Compiler("msvc", cl, cl, env, msvc=True) if env and cl else None
+
+
 def find_compiler() -> Compiler | None:
+    if sys.platform == "win32":
+        msvc = find_msvc()
+        if msvc:
+            return msvc
     for name, cxx_name in C_PAIRS.items():
         cc = shutil.which(name)
         if cc:
             return Compiler(name, cc, shutil.which(cxx_name), dict(os.environ), msvc=False)
-    env = msvc_env()
-    if env:
-        cl = shutil.which("cl", path=env.get("PATH") or env.get("Path"))
-        if cl:
-            return Compiler("msvc", cl, cl, env, msvc=True)
     return None
 
 

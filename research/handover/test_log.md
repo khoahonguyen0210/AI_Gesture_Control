@@ -183,6 +183,8 @@ Limits: no microcontroller, no physical serial port, and no real link were used.
 | 2026-10-10 | Owner run 2 (500 ms blocking wait) | Stopped after 30 s: "no ACK for right button down (seq 192)" |
 | 2026-10-10 | Cause | The simulator slows down or pauses when its tab is hidden or covered, and the app blocked on each button ACK for at most 500 ms. pyserial already sets `TCP_NODELAY` |
 | 2026-10-10 | Fixes: ACKs are checked once per frame without waiting (2 s limit, then RELEASE_ALL and stop); the OLED is drawn in its own FreeRTOS task on core 0 every 100 ms, so serial replies never wait for the screen | 177 passed, 2 deselected; firmware builds with 0 warnings (RAM 6.8%, flash 23.1%) |
+| 2026-10-10 | GitHub Actions, Windows job (first push) | Failed: `build.py` chose MinGW gcc, and the linker could not find `-lasan` and `-lubsan`. Fixed by using MSVC first on Windows. Checked locally with a stand-in `gcc` on the PATH: MSVC was chosen; `build.py --test --sanitize` passed (1000068 checks, 202004 streams, 0 mismatches) |
+| 2026-10-10 | After removing `MANIFEST.in` and `THIRD_PARTY_NOTICES.txt`: `python -m build`; `check_all.py` | sdist and wheel built; the wheel holds `licenses/LICENSE`; 6 of 6 checks passed |
 | 2026-10-10 | Owner run 3 with the fixes, simulator restarted with the new firmware | The owner reported that the app connects and every gesture shows on the board. No reply-time numbers were recorded |
 
 Limits: the ESP32 runs only in the simulator. No real board or physical serial port was used.

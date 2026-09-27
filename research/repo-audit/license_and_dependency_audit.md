@@ -2,7 +2,7 @@
 
 ## Project dependencies
 
-Resolved on 2026-10-09 with Python 3.12.10 on Windows 11. `pip check` reported "No broken requirements found." Exact versions of every installed package are in `requirements.lock.txt`. Licenses come from the installed package metadata.
+Resolved on 2026-10-09 with Python 3.12.10 on Windows 11. `pip check` reported "No broken requirements found." Exact versions of every installed package are in `requirements.lock.txt`, next to this file. Licenses come from the installed package metadata.
 
 | Package | Version | License | Role |
 |---|---|---|---|

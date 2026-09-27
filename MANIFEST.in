@@ -1,4 +1,0 @@
-include config/default.toml
-include requirements.lock.txt
-recursive-include tests *.py
-recursive-include scripts *.py
