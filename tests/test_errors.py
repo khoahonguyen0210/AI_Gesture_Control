@@ -1,4 +1,4 @@
-"""I-ERR tests: one per error condition in the Project Bible (ERR-1 to ERR-8), plus the watchdog."""
+"""Error handling tests: one per error condition, plus the check that releases a held button."""
 
 from __future__ import annotations
 

@@ -21,41 +21,35 @@
 
 </div>
 
+AI Gesture Control watches your hand through the webcam and turns what you do into mouse moves, clicks, drags, and scrolls. It can also send the same actions to a small device over a serial connection. The device code is written in C and runs on a simulated ESP32 board.
+
+## Overview
+
+A mouse or trackpad is not always the easiest way to use a computer. This project asks a simple question: can one hand in front of an ordinary laptop webcam do the same job, safely and smoothly, with no extra hardware?
+
+It also has a second part for anyone interested in small devices. The app can send each mouse action to a device as a short message. The device code is written in C, a second program written in C++ checks it, and it runs on a simulated microcontroller.
+
+## Key features
+
+- **Hand tracking**: finds 21 points on your hand in every webcam frame. Nothing goes to the cloud.
+- **Simple gesture rules**: pointing, clicking, dragging, right clicking, and scrolling are found by measuring distances between your fingers. No trained gesture model is needed.
+- **Safe mouse control**: a click happens once, a button never gets stuck, and there are several ways to stop the app.
+- **Dry run**: shows what the app sees on screen without touching your mouse.
+- **Device protocol in C**: sends mouse actions to a device as small messages, with a check for damaged data. The device lets go of every button if the computer goes quiet.
+- **Fuzz testing**: a second parser written in C++ reads the same messages as the C parser, and the two must always agree. "Fuzzing" means feeding a program huge amounts of damaged or random input to find crashes.
+- **Wokwi demo**: the device code runs on a simulated ESP32 board with a small screen and three LEDs.
+
 | Gesture | On your computer | In the Wokwi simulator (`--serial`) |
 |---|---|---|
 | Point with your index finger | Move the cursor | The dot moves on the OLED screen |
-| Pinch thumb and index briefly | Left click | The green LED flashes |
-| Hold the pinch and move | Drag | The green LED stays on and the filled dot moves |
-| Pinch thumb and middle finger | Right click | The blue LED flashes |
-| Raise index and middle, move hand | Scroll | The `S` number goes up or down |
+| Quickly pinch your thumb and index finger | Left click | The green LED flashes |
+| Pinch and hold, then move | Drag | The green LED stays on and the filled dot moves |
+| Pinch your thumb and middle finger | Right click | The blue LED flashes |
+| Raise your index and middle fingers, then move your hand | Scroll | The `S` number goes up or down |
 | Press `p` | Pause or resume | The screen shows `PAUSED` and any held button is released |
-| Press `q` or Esc | Quit | All buttons are released; after 5 seconds the board plays its demo |
+| Press `q` or Esc | Quit | All buttons are released. After 5 seconds the board plays its demo |
 
-## Results
-
-Measured on one laptop (ThinkPad X1 Yoga, Intel i7-1260P, Windows 11, plugged in), at 640x480, in evening room light, with no hand in view. Each run is 2000 frames. The times cover the software pipeline from reading a frame to sending the mouse event. They do not include camera exposure or screen delay.
-
-| Measure | Before profiling | After profiling |
-|---|---|---|
-| Frames per second | 9.8 | **16.4 to 19.5** |
-| Median time per frame | 100.3 ms | **56.2 to 58.2 ms** |
-| Camera start time, Media Foundation driver | 7.0 to 14.8 s | **3.0 to 4.0 s** |
-
-| Other measures | Result |
-|---|---|
-| Automated tests | **177 passed**, no camera or mouse needed |
-| Line coverage | **92%** overall; gesture logic **99 to 100%** |
-| C protocol tests | **1,000,068 checks** passed, with memory and undefined-behavior checkers |
-| C and C++ parsers compared | **202,004** test streams and **533,065** fuzzed inputs, **0** differences |
-| Failed camera reads in the benchmark runs | **0** of 6000 frames |
-| ESP32 firmware for Wokwi | Builds with **0** warnings; uses **6.8%** of RAM and **23.1%** of flash |
-| Gesture app connected to the Wokwi board | Every gesture shows on the board (checked by hand) |
-
-Profiling found that one Windows camera driver (DirectShow) gave only 9.9 frames per second, while another (Media Foundation) gave 30. Switching drivers made the largest difference. The hand model now takes most of each frame, so rewriting code in C++ or Rust would not help, and it was not done.
-
-Not measured yet: gesture recognition accuracy on a real hand and a benchmark with a hand in view. The tools for both are ready (see [Testing](#testing)). Every measurement and its conditions are in [`research/handover/test_log.md`](research/handover/test_log.md).
-
-## How it works
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -69,101 +63,160 @@ flowchart LR
     S -.-> D[C device code<br/>ESP32 in Wokwi]
 ```
 
-MediaPipe's pretrained hand model finds 21 points on the hand. The gestures themselves are found with simple geometry rules, not a trained model: a finger counts as straight when its tip is farther from the wrist than its middle joint, and a pinch is the fingertip gap divided by the hand's size, so distance from the camera does not matter.
+- **Camera** reads a frame and flips it like a mirror, so moving your hand right moves the cursor right.
+- **Hand tracker** uses MediaPipe's ready-made hand model to find 21 points on your hand.
+- **Gesture rules** decide which gesture you are making from those points. A finger counts as straight when its tip is farther from the wrist than its middle joint. A pinch is the gap between two fingertips divided by the size of your hand, so it works the same near or far from the camera.
+- **Mouse controller** smooths the cursor and sends each action to the system mouse. With `--serial`, it sends the action to the device instead.
+
+## Tech stack
+
+| Component | Technology | Purpose |
+|---|---|---|
+| App | Python 3.12 | Main program |
+| Camera | OpenCV | Read webcam frames and draw the preview |
+| Hand tracking | MediaPipe Hand Landmarker (pretrained), NumPy | Find 21 points on the hand |
+| Mouse control | PyAutoGUI | Move, click, drag, and scroll the system mouse |
+| Device code | C11, CRC-16 | Read messages from the computer on the device |
+| Reference parser | C++17, libFuzzer | Check the C parser with fuzz testing |
+| C checks | MSVC, Clang, GCC, AddressSanitizer, UBSan | Build the C code and catch memory mistakes and other hidden bugs |
+| Simulated hardware | ESP32 (Arduino), SSD1306 OLED, PlatformIO, Wokwi, pyserial | Run the device code on a simulated board and connect the app to it |
+| Testing and quality | pytest, Ruff, mypy | Run tests, check code style, and check types |
+| CI and release | GitHub Actions, setuptools, build | Run the checks on every push and build release packages |
+
+## Data model
+
+**Hand points.** For every frame, the tracker returns 21 points on the hand. Each point has an x and y position between 0 and 1 (relative to the frame) and a depth value. The gesture rules use only these points, never the picture itself.
+
+**Serial messages.** With `--serial`, each mouse action is sent as one small binary message. This example moves the cursor 12 pixels right and 5 pixels up:
+
+```text
+A5 01 10 07 04 0C 00 FB FF 28 9E
+```
+
+| Bytes | Field | Meaning |
+|---|---|---|
+| `A5` | Start | Marks the start of every message |
+| `01` | Version | Protocol version 1 |
+| `10` | Type | `MOVE`. Other types are `BUTTON`, `SCROLL`, `HEARTBEAT`, and `RELEASE_ALL` |
+| `07` | Sequence | The message number, so each reply can be matched to its message |
+| `04` | Length | Size of the data part, from 0 to 16 bytes |
+| `0C 00 FB FF` | Data | Move by x = 12 and y = -5. Each is a 16-bit number, low byte first |
+| `28 9E` | CRC | A check number calculated from the bytes between the start and the CRC, low byte first. The device uses it to spot damaged messages |
+
+The device replies `ACK` (received) to every good message, and `NACK` (rejected) with a reason to every bad one.
 
 ## Gestures and safety
 
-- **Clicks happen once.** A pinch must last 3 frames before it counts, and must open past a wider gap before it ends, so a shaky pinch cannot click twice.
-- **Clicks land where you pointed.** The cursor stops moving when a pinch starts, so closing your fingers does not move it away.
-- **A short pinch clicks, a long pinch drags.** A pinch held for 350 ms becomes a drag.
-- **No hand, no action.** If the hand leaves the view during a drag, the button is released after 5 frames. A second check in the main loop also releases any held button.
-- **You can always stop it.** Press `p` to pause and `q` or Esc to quit. Moving the real cursor into a screen corner stops the app, and Ctrl+C in the terminal works too.
-- **Every exit releases the mouse.** Buttons, camera, model, and window are released in a fixed order, even after an error.
+- **A click happens once.** A pinch must last 3 frames to count, and your fingers must open a little wider before it ends. A shaky pinch cannot click twice.
+- **The click lands where you pointed.** The cursor stops moving when a pinch starts, so closing your fingers does not push it away.
+- **A short pinch clicks, a long pinch drags.** Holding a pinch for 350 ms turns it into a drag.
+- **No hand, no action.** If your hand leaves the camera view during a drag, the button is released after 5 frames. A second check in the main loop also releases any held button.
+- **You can always stop it.** Press `p` to pause and `q` or Esc to quit. Moving the real cursor into a screen corner stops the app, and so does Ctrl+C in the terminal.
+- **Every exit cleans up.** The buttons, camera, model, and window are released in a fixed order, even after an error.
 
-All numbers are starting values and can be changed in [`config/default.toml`](config/default.toml).
+All numbers here are starting values. You can change them in [`config/default.toml`](config/default.toml).
 
-## Serial protocol in C and C++
+## Device code in C and C++
 
-An optional part of the project sends the same mouse actions to an external device over a serial link. The device side is plain C written so it could run on a microcontroller. It checks every frame with a CRC, recovers after garbage bytes, rejects anything it does not know, and releases all buttons if the laptop goes silent.
+The device code is plain C, written so it could run on a small microcontroller. It checks every message with a CRC, recovers after random bytes, rejects anything it does not understand, and releases all buttons if the laptop stops sending.
 
-A second parser, written separately in modern C++ from the protocol rules, checks the C parser. Both read the same byte streams, and any difference in the frames they accept or the errors they report counts as a bug. The C++ side also computes the CRC a different way (with a lookup table), so the CRC is checked too. A seeded test runs over 200,000 damaged streams in CI, and libFuzzer searches for new inputs on its own. When a bug was planted in the C parser on purpose, the test found 26,448 mismatching streams.
-
-The C tests run on the laptop. The same C files also run on a simulated ESP32 in Wokwi (see below). No real board was used.
+To check this code, a second parser was written separately in modern C++ from the protocol rules. Both parsers read the same streams of bytes, and any difference counts as a bug. The C++ side calculates the CRC a different way, so the CRC is tested too. CI runs 200,000 damaged streams, and libFuzzer (a tool that invents tricky inputs) searches for new ones on its own. As a proof that the test works, a bug was planted in the C parser on purpose, and the test found 26,448 streams where the two parsers disagreed.
 
 ```bash
 python firmware/build.py --test --sanitize
 python firmware/build.py --fuzz 120
 ```
 
-### Wokwi simulator
+The [`firmware/wokwi/`](firmware/wokwi/) folder runs the same C files on a simulated ESP32 with a small OLED screen and three LEDs. The board shows each action, as listed in the right column of the gesture table. When no app is connected, it plays a demo that also sends bad messages, so you can watch the device reject them. No real board was used. Setup steps, the screen layout, and manual checks are in [`firmware/wokwi/README.md`](firmware/wokwi/README.md).
 
-[`firmware/wokwi/`](firmware/wokwi/) runs the device code on a simulated ESP32 with a small OLED screen and three LEDs. A simulated board cannot act as a USB mouse for Windows, so it shows each action instead. The [table at the top](#ai-gesture-control) lists what each gesture does on the board. The parts of the board are:
+## Project roadmap
 
-| Part | Meaning |
+- [x] **Phase 1, Project setup**: the code skeleton and a settings file.
+- [x] **Phase 2, Gestures and mouse**: the gesture rules and the mouse controller.
+- [x] **Phase 3, Camera and hand tracking**: webcam capture and MediaPipe's 21 hand points.
+- [x] **Phase 4, App loop**: the preview window, the pause and quit keys, and a clean shutdown after errors.
+- [x] **Phase 5, Scripts and CI**: benchmark, recording, and evaluation scripts, automatic checks on Linux and Windows, and release packages.
+- [x] **Phase 6, Speed**: found the slow parts and changed the camera driver, from 9.8 to 16.4 to 19.5 frames per second.
+- [x] **Phase 7, Device protocol**: C device code with a CRC, a silence timeout, and tests that catch memory bugs.
+- [x] **Phase 8, Fuzz testing**: a C++ parser checks the C parser.
+- [x] **Phase 9, Wokwi demo**: the device code runs on a simulated ESP32.
+- [ ] **Phase 10, Accuracy**: record labeled sessions with a real hand, tune the pinch limits, and measure how often each gesture is right.
+- [ ] **Phase 11, Trained model**: compare a small trained model with the gesture rules on the same recordings.
+- [ ] **Phase 12, Real board**: run the device code on a real ESP32 that works as a USB mouse.
+
+Checked phases are done. Unchecked phases are not started.
+
+## Performance benchmarking
+
+Measured on one laptop (ThinkPad X1 Yoga, Intel i7-1260P, Windows 11, plugged in) at 640x480, in evening room light, with no hand in view. Each run is 2000 frames. The times cover everything the software does, from reading a frame to sending the mouse event. They do not include camera exposure or screen delay.
+
+| Measure | Before profiling | After profiling |
+|---|---|---|
+| Frames per second | 9.8 | **16.4 to 19.5** |
+| Median time per frame | 100.3 ms | **56.2 to 58.2 ms** |
+| Camera start time, Media Foundation driver | 7.0 to 14.8 s | **3.0 to 4.0 s** |
+
+| Other measures | Result |
 |---|---|
-| Top line | The mode (`LIVE`, `DEMO`, or `WAIT`) and the gesture name, such as `POINT`, `DRAG`, or `NO HAND` |
-| Second line | `ok` good frames, `bad` rejected frames, `wd` buttons released by the watchdog |
-| Box with a dot | The computer screen. The dot is the cursor; it is filled while the left button is down |
-| `L` and `R` boxes | The left and right buttons; filled while pressed |
-| `S` number | The total scroll |
-| Green, blue, and yellow LEDs | Left button, right button, and frames arriving |
+| Automated tests | **177 passed**, no camera or mouse needed |
+| Line coverage | **92%** overall, and **99 to 100%** for the gesture logic |
+| C protocol tests | **1,000,068 checks** passed, with tools that catch memory bugs and undefined behavior |
+| C and C++ parsers compared | **202,004** test streams and **533,065** fuzzed inputs, **0** differences |
+| Failed camera reads in the benchmark runs | **0** of 6000 frames |
+| ESP32 firmware for Wokwi | Builds with **0** warnings and uses **6.8%** of RAM and **23.1%** of flash |
+| Gesture app connected to the Wokwi board | Every gesture shows on the board (checked by hand) |
 
-If no app is connected for 5 seconds, the board plays a built-in demo. The demo also sends garbage bytes, a frame with a broken CRC, and a held button followed by silence, so you can see the device reject bad input and release the button on its own.
+Profiling showed that one Windows camera driver (DirectShow) gave only 9.9 frames per second, while another (Media Foundation) gave 30. Switching drivers helped the most. Most of each frame is now spent in the hand model, so rewriting code in C++ or Rust would not help, and it was not done.
 
-To connect the gesture app, you need [Wokwi for VS Code](https://docs.wokwi.com/vscode/getting-started) with its free license for open-source projects, and PlatformIO to build the firmware. Install PlatformIO in its own environment, so its packages do not mix with the app's:
+These results come from one laptop and do not claim to hold on every computer. Every measurement and its conditions are in [`research/handover/test_log.md`](research/handover/test_log.md).
 
-```powershell
-py -3.12 -m venv research/envs/platformio
-research\envs\platformio\Scripts\python -m pip install platformio
-research\envs\platformio\Scripts\pio run -d firmware/wokwi
-python -m pip install -e ".[serial]"
-```
+### Planned experiments
 
-Then in VS Code, press F1, choose "Wokwi: Select Config File" and pick `firmware/wokwi/wokwi.toml`, and start the simulator. Then run:
-
-```powershell
-python -m gesture_mouse --serial rfc2217://localhost:4000
-```
-
-The app sends HELLO first and stops with a clear message if the board does not answer. With `--serial`, the real mouse is never moved. The same option also takes a real port, such as `--serial COM5`.
-
-The simulator pauses or slows down when its tab is hidden, including when another window covers it. Put the camera window and the Wokwi tab side by side, or move the Wokwi tab to its own window (right-click the tab, then "Move into New Window"). The app does not wait for replies, so a slow simulator does not freeze it. If a button press gets no ACK within 2 seconds, the app releases every button and stops, as the protocol requires.
-
-To measure how fast the board answers:
-
-```powershell
-python scripts/serial_check.py rfc2217://localhost:4000
-```
-
-It sends 300 heartbeats and prints the reply time and any frames that got no ACK.
-
-To run only the demo in the browser, make a new ESP32 project on [wokwi.com](https://wokwi.com) and add `sketch.ino`, `diagram.json`, and `libraries.txt` from `firmware/wokwi/`, plus `protocol.h`, `protocol.c`, `device.h`, and `device.c` from `firmware/src/`.
-
-## Tech stack
-
-| Area | Tools |
+| Experiment | Purpose |
 |---|---|
-| Languages | Python, C, C++ |
-| Computer vision | OpenCV, MediaPipe Hand Landmarker (pretrained), NumPy |
-| Mouse control | PyAutoGUI |
-| Embedded-style code | C11, C++17, CRC-16, MSVC, Clang, GCC (in CI), AddressSanitizer, UBSan, libFuzzer |
-| Simulated hardware | ESP32 (Arduino), SSD1306 OLED, PlatformIO, Wokwi, pyserial (RFC 2217) |
-| Packaging | setuptools, build, GitHub releases |
-| CI and quality | GitHub Actions, pytest, Ruff, mypy |
+| Benchmark with a hand in view | Measure the time per frame while the model tracks a moving hand |
+| Gesture accuracy on labeled recordings | Measure how often each gesture is recognized correctly |
+| Different light and distance | See how tracking changes with the room and your distance from the camera |
+| Other laptops | Check whether the results hold on other hardware |
 
-## Quick start
+The scripts for these are ready (see [Testing](#testing)).
 
-You need Windows 10 or 11, a built-in webcam, and Python 3.12.
+## Getting started
+
+### Prerequisites
+
+- Windows 10 or 11
+- A webcam (a built-in one is fine)
+- Python 3.12 and Git
+- Optional: a C compiler for the C tests, and VS Code with Wokwi and PlatformIO for the simulator
+
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/khoahonguyen0210/AI_Gesture_Control.git
+cd AI_Gesture_Control
+```
+
+### 2. Install and download the model
 
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
 python scripts/fetch_model.py
+```
+
+The model file is downloaded once. It is not stored in the repository.
+
+### 3. Try it without moving the mouse
+
+```powershell
 python -m gesture_mouse --dry-run
 ```
 
-The model file is downloaded once and is not stored in the repository. `--dry-run` shows the camera, the hand points, and the gesture names without moving the mouse. When it looks right, run it for real:
+Check that the preview shows 21 points on your hand, and that the gesture name changes when you point, pinch, and raise two fingers.
+
+### 4. Run it
 
 ```powershell
 python -m gesture_mouse
@@ -173,10 +226,10 @@ python -m gesture_mouse
 |---|---|
 | `--dry-run` | Show gestures but never move the mouse |
 | `--camera 1` | Use another camera (`python scripts/list_cameras.py` lists them) |
-| `--config my.toml` | Change settings |
+| `--config my.toml` | Use your own settings file |
 | `--log-level DEBUG` | Show more detail |
 | `--max-frames 300` | Stop after 300 frames |
-| `--serial PORT` | Send actions to a serial device instead of the mouse (see [Wokwi simulator](#wokwi-simulator)) |
+| `--serial PORT` | Send actions to a serial device instead of the mouse (see [`firmware/wokwi/README.md`](firmware/wokwi/README.md)) |
 
 ## Testing
 
@@ -189,26 +242,13 @@ python scripts/check_all.py --all    # also the real camera and the Wokwi firmwa
 
 | Step | Command it runs | Needs |
 |---|---|---|
-| Package check | `pip check` | Nothing |
-| Lint and format | `ruff check .`, `ruff format --check .` | Nothing |
-| Type check | `mypy src` | Nothing |
+| Package, code style, and types | `pip check`, `ruff check .`, `ruff format --check .`, `mypy src` | Nothing |
 | C and C++ tests | `python firmware/build.py --test --sanitize` | A C compiler (MSVC, Clang, or GCC) |
 | Python tests | `pytest -q -m "not hardware"` | Nothing |
 | Camera tests (`--hardware`) | `pytest -q -m hardware` | The webcam and the model file |
 | Firmware build (`--firmware`) | `pio run -d firmware/wokwi` | PlatformIO |
 
-The Python tests use fake cameras, fake hands, a fake mouse, and a fake serial device, so they run anywhere. CI runs the same checks on Linux and Windows for every push, and builds the ESP32 firmware on Linux.
-
-The Wokwi simulator needs a person, so check it by hand after starting it as shown in [Wokwi simulator](#wokwi-simulator):
-
-| Check | Do this | Expect |
-|---|---|---|
-| Demo | Start the simulator and wait 5 seconds | `DEMO` on the screen; the dot draws a box; the `bad` count rises after the broken frame; `wd` rises after the silent host |
-| Connect | Run `python -m gesture_mouse --serial rfc2217://localhost:4000` | `LIVE` on the screen; the app log shows `Device on ... answered` |
-| Gestures | Try each gesture in the table at the top | The OLED and LEDs react as listed |
-| Pause | Press `p` during a drag | `PAUSED` on the screen; the green LED turns off |
-| Reply time | Run `python scripts/serial_check.py rfc2217://localhost:4000` with the tab visible | 300 of 300 frames answered |
-| No device | Stop the simulator, then run the same command | The app stops with an error and exit code 6 |
+The Python tests use a fake camera, fake hands, a fake mouse, and a fake serial device, so they run anywhere. For every push, CI runs the same checks on Linux and Windows and builds the ESP32 firmware on Linux.
 
 To measure speed and accuracy on your own machine:
 
@@ -220,15 +260,15 @@ python scripts/evaluate_gestures.py --input "output/recordings/*.jsonl"
 
 ## Configuration
 
-Settings live in [`config/default.toml`](config/default.toml). Copy it, change only what you need, and pass it with `--config`. Wrong values are all reported at once, before the camera opens.
+Settings live in [`config/default.toml`](config/default.toml). Copy the file, change only what you need, and pass it with `--config`. If any value is wrong, all the problems are listed at once, before the camera opens.
 
 | Setting | Purpose |
 |---|---|
 | `camera.index`, `camera.backend` | Which camera and driver to use |
-| `gesture.pinch_on`, `gesture.pinch_off` | How close the fingers must be to start and end a pinch |
+| `gesture.pinch_on`, `gesture.pinch_off` | How close the fingers must be to start a pinch, and how far apart to end it |
 | `gesture.drag_hold_ms` | How long a pinch must last to become a drag |
-| `cursor.smoothing_alpha` | Smaller values give a steadier but slower cursor |
-| `cursor.margin` | Part of the camera frame left out, so you can reach the screen edges |
+| `cursor.smoothing_alpha` | A smaller value gives a steadier but slower cursor |
+| `cursor.margin` | The part of the camera frame that is left out, so you can reach the screen edges |
 
 ## Repository layout
 
@@ -238,29 +278,45 @@ tests/               Automated tests with fake hardware
 scripts/             Model download, camera list, benchmark, recording, evaluation, checks
 firmware/            C protocol code, C++ reference parser and fuzzer, tests, Wokwi ESP32 demo
 config/              Default settings
-research/            Reference audit, dependency licenses, exact versions, decisions, test log, handover
+research/            Notes on other projects, dependency licenses, exact versions, test log, handover report
 .github/             CI and release workflows
 ```
 
 ## Privacy and security
 
-- Camera frames are processed in memory and never saved, sent, or uploaded.
+- Camera frames are processed in memory. They are never saved, sent, or uploaded.
 - The only network use is the one-time model download and installing packages.
-- Recordings for evaluation hold hand point coordinates only, never images, and stay in the git-ignored `output/` folder.
+- Recordings for evaluation hold only the coordinates of the hand points, never images. They stay in the `output/` folder, which git ignores.
 - Gestures can only move, click, drag, and scroll. They cannot type, run commands, open files, or start programs.
-- The app uses no accounts, keys, or cloud services. The optional Wokwi demo needs a free Wokwi account for the simulator, and the app sends it only mouse action frames over localhost.
+- The app uses no accounts, keys, or cloud services. The optional Wokwi demo needs a free Wokwi account, and the app sends it only mouse action messages over localhost.
 
 ## Limits
 
-- Tested on one Windows laptop with one monitor. Other systems and multi-monitor setups are untested.
-- The keys only work while the preview window is focused. The screen corner and Ctrl+C work at any time.
+- Tested on one Windows laptop with one monitor. Other systems and setups with several monitors are untested.
+- The keys work only while the preview window is in focus. The screen corner and Ctrl+C work at any time.
 - Gestures need one hand and fine finger control, so they do not suit everyone. Keep the keyboard and trackpad as a fallback.
 - Tracking quality can change with light, distance, and skin tone. No general accuracy is claimed.
-- The ESP32 runs only in the Wokwi simulator. No real board was used, and it does not act as a real USB mouse.
+
+## Engineering goals
+
+- **Smooth in real time**: read, track, and act on every frame fast enough to feel instant.
+- **Safe by default**: never click by accident and never leave a button held down.
+- **Honest numbers**: every number comes from a logged run with its conditions written down.
+- **Safe with bad input**: the device must handle damaged or random bytes without crashing.
+- **Testable without hardware**: fake cameras, hands, mice, and serial devices let every test run in CI.
+- **Ready for a small chip**: the C code uses fixed-size buffers and makes no hardware calls, so it could run on a microcontroller.
+
+## Future improvements
+
+- Support more than one monitor.
+- Test on macOS and Linux.
+- Add pause and quit keys that work without focusing the preview window.
+- Add a short calibration step for each user's hand.
+- Add a Docker environment so training and evaluation can be repeated on any machine.
 
 ## Author
 
-This is a personal project, built end to end by one person. Issues and suggestions are welcome.
+This is a personal project, built from start to finish by one person. Issues and suggestions are welcome.
 
 | Name | Role | Github |
 |---|---|---|
@@ -268,4 +324,4 @@ This is a personal project, built end to end by one person. Issues and suggestio
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE). No third-party code is copied into this repository. The licenses of all dependencies are listed in [`research/repo-audit/license_and_dependency_audit.md`](research/repo-audit/license_and_dependency_audit.md).
+MIT. See [`LICENSE`](LICENSE). No code from other projects is copied into this repository. The licenses of all dependencies are listed in [`research/repo-audit/license_and_dependency_audit.md`](research/repo-audit/license_and_dependency_audit.md).

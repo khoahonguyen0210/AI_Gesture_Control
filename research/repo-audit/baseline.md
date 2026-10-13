@@ -1,6 +1,6 @@
 # Baseline
 
-Recorded on 2026-10-09, before any application code was written.
+This is the state of the machine and the repository on 2026-10-09, before any application code was written.
 
 ## Machine
 
@@ -18,23 +18,23 @@ Recorded on 2026-10-09, before any application code was written.
 | Check | Result |
 |---|---|
 | `py -0p` before setup | Only Python 3.14 (64-bit) was installed |
-| Action | Installed Python 3.12.10 (64-bit) with `py install 3.12` |
-| Project interpreter | 3.12.10, 64-bit, in `.venv` |
+| What was done | Installed Python 3.12.10 (64-bit) with `py install 3.12` |
+| Interpreter used by the project | 3.12.10, 64-bit, in `.venv` |
 
-## Existing files
+## Files that already existed
 
-| File | Purpose | Action |
+| File | What it was | What happened to it |
 |---|---|---|
 | `LICENSE` | MIT license, copyright 2026 khoahonguyen0210 | Kept. The owner chose MIT. |
 | `README.md` | Title only | Kept. The owner asked for a full README at the end. |
 | `.gitattributes` | Line-ending normalization | Kept |
-| `.gitignore` | GitHub Python template plus `project-context/` | Rewritten for this project; `project-context/` stays ignored |
-| `project-context/` | The four handbooks | Not tracked, by owner decision |
+| `.gitignore` | GitHub's Python template plus `project-context/` | Rewritten for this project. `project-context/` is still ignored |
+| `project-context/` | The private planning documents | Not tracked, by the owner's choice |
 
 There was no source code, no tests, and no virtual environment. The repository had one commit ("Initial commit") on `main`.
 
-## Conflicts between the handbooks and the workspace
+## Where the planning documents and the workspace disagreed
 
-1. The handbooks say "do not create README.md". The owner asked for one. The owner's request wins; see `integration_log.md`.
-2. The handbooks say to commit the handbooks. The owner keeps them out of Git (`project-context/` is ignored).
-3. The handbooks place them in `project_context/`; the workspace has `project-context/project_context/`. Both names are ignored.
+1. The planning documents said not to create a `README.md`. The owner asked for one, so the owner's request won. See `integration_log.md`.
+2. The planning documents said to commit themselves to Git. The owner keeps them out of Git, so `project-context/` is ignored.
+3. The planning documents expected the folder name `project_context/`, but the workspace has `project-context/project_context/`. Both names are ignored.
